@@ -6,6 +6,7 @@ extern "C"
 {
 #include <ipp.h>
 #include "ippcc.h"
+#include "ippi.h"
 }
 //#include "media_io.h"
 //#include <windows.h>
@@ -71,7 +72,7 @@ void print_img(char* name, uint8_t* img[], int w, int h, int c) {
   return;
 }
 
-void l2_dist_img(unsigned int distances[], uint8_t* img1[],uint8_t* img2[], int w, int h, int c) {
+void l2_dist_img(double distances[], uint8_t* img1[],uint8_t* img2[], int w, int h, int c) {
 
   for (int ci = 0; ci<c; ci++) {
     if ( (!img1[ci] && img2[ci]) || (img1[ci] && !img2[ci]) ) {
@@ -81,33 +82,33 @@ void l2_dist_img(unsigned int distances[], uint8_t* img1[],uint8_t* img2[], int 
   }
  
   for (int ci = 0; ci<c; ci++) {
-    if (!img[ci]) {
+    if (!img1[ci]) {
       Output("Channel %d is NULL\n", ci);
     }
     else {
-      
-      distances[ci]=0
+
+      unsigned int s = 0;
+      distances[ci]=0;
       for (int hi = 0; hi < h; hi++) {
 	for (int wi = 0; wi < w; wi++) {
 	  unsigned int m1 = (unsigned int)img1[ci][wi + hi*w];
-	  unsigned int m2 = (unsigned int)img2[ci][wi + hi*w];
-	  
-	  distances[ci]+= (m1-m2)*(m1-m2);
-	}
-	Output("\n");
-			}
+	  unsigned int m2 = (unsigned int)img2[ci][wi + hi*w]; 
+	  s += (m1-m2)*(m1-m2);
+	}	
+      }
+      distances[ci] = sqrt(s);
     }
   }
   return;
 }
 
 
-void fill_img(uint8_t* img[],int w,int h,int c){
+void fill_img(uint8_t* img[],int w,int h,int c,char with_rand){
 
   for(int ci=0;ci<c;ci++){
     if(img[ci]){
       for(int i=0;i<w*h;i++){
-	img[ci][i] = (uint8_t)rand();
+	img[ci][i] = with_rand ? (uint8_t)rand() : (uint8_t)i;
       }
     }
   }
@@ -116,16 +117,13 @@ void fill_img(uint8_t* img[],int w,int h,int c){
 
 
 
-void RGBtoYCbCr_ipp(unsigned char* src[3] , unsigned char *dst[] ,int height, int width)
+void RGBtoYCbCr_ipp(unsigned char* src[3] , unsigned char *dst[] , int width,int height)
 {
        
   IppiSize Roi;
-  IppiRect Rect;
   Rect.height = Roi.height = height;
   Rect.width = Roi.width = width;
-  Rect.x = Rect.y = 0;
-
-
+  
   //this is important in order to avoid a compilation error:
   // error: invalid conversion from ‘unsigned char**’ to ‘const Ipp8u** {aka const unsigned char**}’ [-fpermissive]
   //I think it's because src is an array so it is a const by def
@@ -147,13 +145,54 @@ void RGBtoYCbCr_ipp(unsigned char* src[3] , unsigned char *dst[] ,int height, in
   }	
 }
 
+void planar_to_packed(unsigned char* src[] , unsigned char *dst ,int w,int h, int c){
+
+  int j =0;
+  for(int i=0;i<w*h;i++)
+    for(int ic=0;ic<c;ic++)
+      if(src[ic])
+	dst[j++] = src[ic][i];
+}
+
+void RGBtoYCbCr_ffmpeg(unsigned char* src[] , unsigned char *dst[] ,int w, int h)
+{
+  int dst_ffmpeg_stride[3] = { w, w, w };
+
+  unsigned char* src_packed = (unsigned char*)malloc(w*h*3);
+  if(!src_packed){
+    Output("failure allocating src_packed\n");
+    return;
+  }
+  planar_to_packed(src,src_packed,w,h,3);
+  //print_img("src_packed",&src_packed,3*w,h,1);
+
+  //AV_PIX_FMT_YUV444P - //planar YUV 4:4:4, 24bpp, (1 Cr & Cb sample per 1x1 Y samples) 
+  SwsContext * ctx = sws_getContext(w, h,AV_PIX_FMT_RGB24, w, h,AV_PIX_FMT_YUV444P, 0, NULL, NULL, NULL);
+  if (!ctx) {
+    
+    Output("ctx is null\n");
+    return;
+  }
+  
+  int src_strides[1] = { 3*w}; // RGB stride
+  //
+  //int sws_scale(struct SwsContext *c, const uint8_t *const srcSlice[],
+  //const int srcStride[], int srcSliceY, int srcSliceH,
+  //uint8_t *const dst_ffmpeg[], const int dstStride[]);
+  //
+  int ttt = sws_scale(ctx, &src_packed, src_strides, 0, h, dst, dst_ffmpeg_stride);
+  
+  Output("sws_scale returned %d\n",ttt);
+  	
+}
+
 int test_ippiRGBToYCbCr_8u_P3R_replacement(){
 
   ////                                     //dst                                      //src                  
   //void RGBtoYCbCr_ipp(unsigned char *m_pucWorkingBuffer[3], unsigned char *m_pucUnpaddedReconstruction[3] ,int height, int width)
   
-  int w = 24;
-  int h = 24;
+  int w = rand() % 100;
+  int h = rand() % 100;
   unsigned char *src[3];
   unsigned char *dst_ipp[3];
 
@@ -161,8 +200,8 @@ int test_ippiRGBToYCbCr_8u_P3R_replacement(){
   src[1] = (uint8_t*)malloc(h*w);
   src[2] = (uint8_t*)malloc(h*w);
   
-  fill_img(src, w, h, 3);
-  print_img("src",src, w, h, 3);
+  fill_img(src, w, h, 3,1);
+  //print_img("src",src, w, h, 3);
   
   dst_ipp[0] = (uint8_t*)malloc(h*w);
   dst_ipp[1] = (uint8_t*)malloc(h*w);
@@ -176,8 +215,7 @@ int test_ippiRGBToYCbCr_8u_P3R_replacement(){
   RGBtoYCbCr_ipp(src,dst_ipp,w,h);
   ///////////////////////
   
-  print_img("src",src, w, h, 3);
-  print_img("dst_ipp",dst_ipp, w, h, 1);
+  //print_img("dst_ipp",dst_ipp, w, h, 1);
   
   uint8_t* dst_ffmpeg[3];// = (uint8_t* const)malloc(3 * imgHeight*imgWidth);
   dst_ffmpeg[0] = (uint8_t* const)malloc(h*w);
@@ -187,35 +225,70 @@ int test_ippiRGBToYCbCr_8u_P3R_replacement(){
   memset(dst_ffmpeg[0],0,h*w);
   memset(dst_ffmpeg[1],0,h*w);
   memset(dst_ffmpeg[2],0,h*w);
-    
-  int dst_ffmpeg_stride[3] = { w, w, w };
 
-  //AV_PIX_FMT_YUV444P - //planar YUV 4:4:4, 24bpp, (1 Cr & Cb sample per 1x1 Y samples) 
-  SwsContext * ctx = sws_getContext(w, h,AV_PIX_FMT_RGB24, w, h,AV_PIX_FMT_YUV444P, 0, NULL, NULL, NULL);
-  if (!ctx) {
+  RGBtoYCbCr_ffmpeg(src, dst_ffmpeg , w,  h);
+  //print_img("dst_ffmpeg",dst_ffmpeg, w, h, 3);
+
+  double d[3] = {0,0,0};
+  l2_dist_img(d,dst_ipp,dst_ffmpeg,w,h,3);
+  Output("distances are %f %f % for %d X %d\n",d[0],d[1],d[2],w,h);
     
-    Output("ctx is null\n");
-    return 1;
-  }
-  
-  int src_strides[3] = { w,w,w}; // RGB stride
-  //
-  //int sws_scale(struct SwsContext *c, const uint8_t *const srcSlice[],
-  //const int srcStride[], int srcSliceY, int srcSliceH,
-  //uint8_t *const dst_ffmpeg[], const int dstStride[]);
-  //
-  
-  Output("sws_scale returned %d\n",sws_scale(ctx, src, src_strides, 0, h, dst_ffmpeg, dst_ffmpeg_stride));
-  print_img("dst_ffmpeg",dst_ffmpeg, w, h, 1);
-	
   return 0;
 }
+
+//ippiCopy_8u_C1R( src,w,dst_ipp,w,roi);
+void ippiCopy_8u_C1R_ffmpeg(unsigned char* src , int ws, unsigned char *dst ,int wd, IppiSize roi){
+  /*
+  int av_image_copy_to_buffer 	( 	uint8_t *  	dst,
+		int  	dst_size,
+		const uint8_t *const  	src_data[4],
+		const int  	src_linesize[4],
+		enum AVPixelFormat  	pix_fmt,
+		int  	width,
+		int  	height,
+		int  	align 
+	) 		
+  */
+  
+}
+  
+void test_ippiCopy_8u_C1R_replacement(){
+
+  IppiSize roi;
+
+  int w = 12;
+  int h = 12;
+  int wr = 6;
+  int hr = 6;
+    
+  unsigned char* src;
+  unsigned char *dst_ipp;
+
+  src = (uint8_t*)malloc(h*w);
+    
+  fill_img(&src, w, h, 1,1);
+  print_img("src",&src, w, h, 1);
+  
+  dst_ipp = (uint8_t*)malloc(h*w);
+  memset(dst_ipp,0,h*w);
+
+  roi.height    = hr;
+  roi.width     = wr;
+  
+  
+  ippiCopy_8u_C1R( src,w,dst_ipp,w,roi);
+  print_img("dst_ipp",&dst_ipp, w, h, 1);
+  
+    return;
+}
+
 #define W 24
 #define H 24
 int main() {
 
   srand(time(NULL));
-  test_ippiRGBToYCbCr_8u_P3R_replacement();
+  //test_ippiRGBToYCbCr_8u_P3R_replacement();
+  test_ippiCopy_8u_C1R_replacement();
   /*
 	int w = 3;
 	int h = 3;
