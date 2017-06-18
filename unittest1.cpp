@@ -327,48 +327,137 @@ xFactor, yFactor Factors by which the x and y dimensions of the source ROI are c
 interpolationSpecifies the interpolation mode. Use one of the following values:
  */
 
+/*
+57 // values for the flags, the stuff on the command line is different 
+58 #define SWS_FAST_BILINEAR     1
+59 #define SWS_BILINEAR          2
+60 #define SWS_BICUBIC           4
+61 #define SWS_X                 8
+62 #define SWS_POINT          0x10
+63 #define SWS_AREA           0x20
+64 #define SWS_BICUBLIN       0x40
+65 #define SWS_GAUSS          0x80
+66 #define SWS_SINC          0x100
+67 #define SWS_LANCZOS       0x200
+68 #define SWS_SPLINE        0x400
+*/
+/*
+IPPI_INTER_NN nearest neighbor interpolation
+IPPI_INTER_LINEAR linear interpolation
+IPPI_INTER_CUBIC cubic interpolation
+IPPI_INTER_SUPER supersampling interpolation, cannot be applied for image enlarging
+IPPI_INTER_LANCZOS interpolation with Lanczos window.
+*/
+
+int  ippiResize_8u_C1R_ffmpeg(const Ipp8u* pSrc, IppiSize srcSize, int srcStep, IppiRect srcRoi, Ipp8u* pDst, int dstStep, IppiSize dstRoiSize, double xFactor, double yFactor, int interpolation) {
+	struct SwsContext *resize;
+	/*
+	srcW	the width of the source image
+		srcH	the height of the source image
+		srcFormat	the source image format
+		dstW	the width of the destination image
+		dstH	the height of the destination image
+		dstFormat	the destination image format
+		flags	specify which algorithm and options to use for rescaling
+		*/
+	int flag = -1;
+	switch (interpolation) {
+		case IPPI_INTER_LINEAR:
+			flag = SWS_BILINEAR;
+			break;
+		case IPPI_INTER_SUPER:
+			flag = SWS_BILINEAR;
+			break;
+		case IPPI_INTER_CUBIC:
+			flag = IPPI_INTER_CUBIC;
+			break;
+		case IPPI_INTER_LANCZOS:
+			flag = SWS_LANCZOS;
+			break;
+		case IPPI_INTER_NN:
+			Output("failure: sws scale have no 'nearest neighbour' option\n");
+			return -1;
+		default:
+			Output("failure: invalid interpolation value: %d\n", interpolation);
+			return -1;
+	}
+	
+	resize = sws_getContext(srcSize.width, srcSize.height, AV_PIX_FMT_YUV444P, dstRoiSize.width, dstRoiSize.height, AV_PIX_FMT_YUV444P, flag, NULL, NULL, NULL);
+
+	/*
+	c	the scaling context previously created with sws_getContext()
+srcSlice	the array containing the pointers to the planes of the source slice
+srcStride	the array containing the strides for each plane of the source image
+srcSliceY	the position in the source image of the slice to process, that is the number (counted starting from zero) in the image of the first row of the slice
+srcSliceH	the height of the source slice, that is the number of rows in the slice
+dst	the array containing the pointers to the planes of the destination image
+dstStride	the array containing the strides for each plane of the destination image 
+	*/
+	/*
+	int sws_scale(struct SwsContext *  	c,
+		const uint8_t *const  	srcSlice[],
+		const int  	srcStride[],
+		int  	srcSliceY,
+		int  	srcSliceH,
+		uint8_t *const  	dst[],
+		const int  	dstStride[]
+	)
+	*/
+}
+
 void test_ippiResize_8u_C1R_replacement(){
   
   IppiSize srcSize,dstSize;
   IppiRect srcRect;
   
-  int w = rand_in_range(20,40);
-  int h = rand_in_range(20,40);
+  int w = rand_in_range(100,200);
+  int h = rand_in_range(100,200);
   int offset = rand_in_range(0,w*h-1);
   int wr = rand_in_range(1,w - (offset % w));
   int hr = rand_in_range(1, h- (offset/w));
 
-  double xFacrot = 0.8;
+  srcRect.x = rand_in_range(0, w-1);
+  srcRect.y = rand_in_range(0, h-1);
+  
+  srcRect.width = rand_in_range(1, w-srcRect.x);
+  srcRect.height = rand_in_range(1, h - srcRect.y);
+
+  double xfactor = 0.8;
   double yfactor = 1.2;
-  int interpolation = ( m_dXfactor >= 1.0 || m_dYfactor >= 1.0 ) ? IPPI_INTER_LINEAR : IPPI_INTER_SUPER;
+  int interpolation = ( xfactor >= 1.0 || yfactor >= 1.0 ) ? IPPI_INTER_LINEAR : IPPI_INTER_SUPER;
 
   unsigned char* src = (uint8_t*)malloc(h*w);
   unsigned char *dst_ipp,*dst_ffmpeg;
 
-  srcSize.width  = (int)( w );
-  srcSize.height = (int)( h );
-  dstSize.width  = (int)( xFactor * w );
-  dstSize.height = (int)( yFactor * h );
+  srcSize.width  = w;
+  srcSize.height = h;
+  dstSize.width  = (int)( xfactor * srcRect.width);
+  dstSize.height = (int)( yfactor * srcRect.height);
     
   fill_img(&src, w, h, 1,1);
   //print_img("src",&src, w, h, 1);
   
-  dst_ipp = (uint8_t*)malloc(h*w);
-  memset(dst_ipp,0,h*w);
+  dst_ipp = (uint8_t*)malloc(dstSize.height * dstSize.width);
+  memset(dst_ipp,0, dstSize.height * dstSize.width);
   
-  srcRect.x = srcRect.y = 0;
-  srcRect.height = hr;
-  srcRect.width  = wr;
+ 
 
-  /*
-IppStatus ippiResize_<mod>(const Ipp<datatype>* pSrc, IppiSize srcSize, int srcStep, IppiRect srcRoi, Ipp<datatype>* pDst, int dstStep, IppiSize dstRoiSize, double xFactor, double yFactor, int interpolation);
+  /*                                     1              2            3                 4              5          6                7                   8              9            10   
+IppStatus ippiResize_8u_C1R(const Ipp8u* pSrc, IppiSize srcSize, int srcStep, IppiRect srcRoi, Ipp8u* pDst, int dstStep, IppiSize dstRoiSize, double xFactor, double yFactor, int interpolation);
   */
   
-  ippiResize_8u_C1R( src,srcSize,w,srcRect,dst_ipp,dstSize.width,roi);
-  print_img("dst_ipp",&dst_ipp, w, h, 1);
+  ippiResize_8u_C1R( src,    srcSize,w,srcRect,
+	                 dst_ipp,dstSize.width,dstSize,
+	                 xfactor,yfactor,interpolation);
+  print_img("dst_ipp",&dst_ipp, dstSize.width, dstSize.height, 1);
 
-  dst_ffmpeg = (uint8_t*)malloc(h*w);
-  memset(dst_ffmpeg,0,h*w);
+  dst_ffmpeg = (uint8_t*)malloc(dstSize.height * dstSize.width);
+  memset(dst_ffmpeg,0, dstSize.height * dstSize.width);
+
+  ippiResize_8u_C1R_ffmpeg(src, srcSize, w, srcRect,
+	  dst_ipp, dstSize.width, dstSize,
+	  xfactor, yfactor, interpolation);
+  print_img("dst_ffmpeg", &dst_ffmpeg, dstSize.width, dstSize.height, 1);
 
 }
 
@@ -383,7 +472,12 @@ int main() {
 #endif
 
   //test_ippiRGBToYCbCr_8u_P3R_replacement();
-	test_ippiCopy_8u_C1R_replacement();
+  //test_ippiCopy_8u_C1R_replacement();
+  test_ippiResize_8u_C1R_replacement();
+  test_ippiResize_8u_C1R_replacement();
+  test_ippiResize_8u_C1R_replacement();
+  test_ippiResize_8u_C1R_replacement();
+
   /*
 	int w = 3;
 	int h = 3;
