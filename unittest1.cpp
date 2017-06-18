@@ -1,6 +1,6 @@
-#ifdef windows
+//#ifdef WIN32
 #include "stdafx.h"
-#endif
+//#endif
 //#include "CppUnitTest.h"
 extern "C"
 {
@@ -9,10 +9,14 @@ extern "C"
 #include "ippi.h"
 }
 //#include "media_io.h"
-//#include <windows.h>
+#ifdef WIN32
+#include <windows.h>
+//#include <ctime>//this cause compilation errors
+#endif
+
 //#include <random>
 #include <stdlib.h>
-#include <stdio.h>
+//#include <stdio.h>
 #include <time.h>
 #include <math.h>
 extern "C"
@@ -42,7 +46,7 @@ int rand_in_range(int min,int max){
   return rand() % (max + 1 - min) + min;
 }
 
-#ifdef windows
+#ifdef WIN32
 void Output(const char* szFormat, ...)
 {
 	char szBuff[1024];
@@ -275,7 +279,7 @@ void test_ippiCopy_8u_C1R_replacement(){
   src = (uint8_t*)malloc(h*w);
     
   fill_img(&src, w, h, 1,1);
-  print_img("src",&src, w, h, 1);
+  //print_img("src",&src, w, h, 1);
   
   dst_ipp = (uint8_t*)malloc(h*w);
   memset(dst_ipp,0,h*w);
@@ -288,12 +292,12 @@ void test_ippiCopy_8u_C1R_replacement(){
   
   
   ippiCopy_8u_C1R( src+offset,w,dst_ipp,w,roi);
-  print_img("dst_ipp",&dst_ipp, w, h, 1);
+  //print_img("dst_ipp",&dst_ipp, w, h, 1);
 
   ippiCopy_8u_C1R_ffmpeg(src+offset ,w,dst_ffmpeg ,w,roi);
-  print_img("dst_ffmpeg",&dst_ffmpeg, w, h, 1);
+  //print_img("dst_ffmpeg",&dst_ffmpeg, w, h, 1);
 
-  double d[3] = {0};
+  double d[1] = {0};
   l2_dist_img(d,&dst_ipp,&dst_ffmpeg,w,h,1);
 
   Output("distances are %f  img = (%d X %d) offset=%d , roi=%d X %d )\n",d[0],w,h,offset,wr,hr);
@@ -301,13 +305,85 @@ void test_ippiCopy_8u_C1R_replacement(){
     return;
 }
 
+/*
+Parameters
+
+pSrc	Pointer to the source image origin. An array of separate pointers to each plane in case of data in planar format.
+
+srcSize	Size in pixels of the source image.
+
+srcStep	Distance in bytes between starts of consecutive lines in the source image buffer.
+
+srcRoi	Region of interest in the source image (of the IppiRect type).
+
+pDst	Pointer to the destination image ROI. An array of pointers to separate ROI in each planes for planar image.
+
+dstStep	Distance in bytes between starts of consecutive lines in the destination image buffer.
+
+dstRoiSize	Size of the destination ROI in pixels.
+
+xFactor, yFactor Factors by which the x and y dimensions of the source ROI are changed. The factor value greater than 1 corresponds to increasing the image size in that dimension.
+
+interpolationSpecifies the interpolation mode. Use one of the following values:
+ */
+
+void test_ippiResize_8u_C1R_replacement(){
+  
+  IppiSize srcSize,dstSize;
+  IppiRect srcRect;
+  
+  int w = rand_in_range(20,40);
+  int h = rand_in_range(20,40);
+  int offset = rand_in_range(0,w*h-1);
+  int wr = rand_in_range(1,w - (offset % w));
+  int hr = rand_in_range(1, h- (offset/w));
+
+  double xFacrot = 0.8;
+  double yfactor = 1.2;
+  int interpolation = ( m_dXfactor >= 1.0 || m_dYfactor >= 1.0 ) ? IPPI_INTER_LINEAR : IPPI_INTER_SUPER;
+
+  unsigned char* src = (uint8_t*)malloc(h*w);
+  unsigned char *dst_ipp,*dst_ffmpeg;
+
+  srcSize.width  = (int)( w );
+  srcSize.height = (int)( h );
+  dstSize.width  = (int)( xFactor * w );
+  dstSize.height = (int)( yFactor * h );
+    
+  fill_img(&src, w, h, 1,1);
+  //print_img("src",&src, w, h, 1);
+  
+  dst_ipp = (uint8_t*)malloc(h*w);
+  memset(dst_ipp,0,h*w);
+  
+  srcRect.x = srcRect.y = 0;
+  srcRect.height = hr;
+  srcRect.width  = wr;
+
+  /*
+IppStatus ippiResize_<mod>(const Ipp<datatype>* pSrc, IppiSize srcSize, int srcStep, IppiRect srcRoi, Ipp<datatype>* pDst, int dstStep, IppiSize dstRoiSize, double xFactor, double yFactor, int interpolation);
+  */
+  
+  ippiResize_8u_C1R( src,srcSize,w,srcRect,dst_ipp,dstSize.width,roi);
+  print_img("dst_ipp",&dst_ipp, w, h, 1);
+
+  dst_ffmpeg = (uint8_t*)malloc(h*w);
+  memset(dst_ffmpeg,0,h*w);
+
+}
+
 #define W 24
 #define H 24
 int main() {
 
+#ifdef WIN32 
+	srand(1);//time is not recognized and there are problems
+#else
   srand(time(NULL));
+#endif
+
   //test_ippiRGBToYCbCr_8u_P3R_replacement();
-  test_ippiCopy_8u_C1R_replacement();
+	test_ippiCopy_8u_C1R_replacement();
   /*
 	int w = 3;
 	int h = 3;
