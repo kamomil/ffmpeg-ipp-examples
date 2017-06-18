@@ -37,6 +37,11 @@ uint8_t *const  	dst[],
 const int  	dstStride[]
 )
 */
+
+int rand_in_range(int min,int max){
+  return rand() % (max + 1 - min) + min;
+}
+
 #ifdef windows
 void Output(const char* szFormat, ...)
 {
@@ -63,7 +68,8 @@ void print_img(char* name, uint8_t* img[], int w, int h, int c) {
       Output("Channel %d:\n", ci);
       for (int hi = 0; hi < h; hi++) {
 	for (int wi = 0; wi < w; wi++) {
-	  Output("%u ", img[ci][wi + hi*w]);
+	  unsigned char p = img[ci][wi + hi*w];
+	    Output("%u%s", p, p > 99 ? " " : (p > 10 ? "  " : "   "));
 	}
 	Output("\n");
 			}
@@ -121,8 +127,8 @@ void RGBtoYCbCr_ipp(unsigned char* src[3] , unsigned char *dst[] , int width,int
 {
        
   IppiSize Roi;
-  Rect.height = Roi.height = height;
-  Rect.width = Roi.width = width;
+  Roi.height = height;
+  Roi.width = width;
   
   //this is important in order to avoid a compilation error:
   // error: invalid conversion from ‘unsigned char**’ to ‘const Ipp8u** {aka const unsigned char**}’ [-fpermissive]
@@ -239,30 +245,32 @@ int test_ippiRGBToYCbCr_8u_P3R_replacement(){
 //ippiCopy_8u_C1R( src,w,dst_ipp,w,roi);
 void ippiCopy_8u_C1R_ffmpeg(unsigned char* src , int ws, unsigned char *dst ,int wd, IppiSize roi){
   /*
-  int av_image_copy_to_buffer 	( 	uint8_t *  	dst,
-		int  	dst_size,
-		const uint8_t *const  	src_data[4],
-		const int  	src_linesize[4],
-		enum AVPixelFormat  	pix_fmt,
-		int  	width,
-		int  	height,
-		int  	align 
+void av_image_copy_plane 	( 	uint8_t *  	dst,
+		int  	dst_linesize,
+		const uint8_t *  	src,
+		int  	src_linesize,
+		int  	bytewidth,
+		int  	height 
 	) 		
   */
   
+  av_image_copy_plane(dst,wd,src,ws,roi.width,roi.height); 
+	
 }
   
 void test_ippiCopy_8u_C1R_replacement(){
 
   IppiSize roi;
 
-  int w = 12;
-  int h = 12;
-  int wr = 6;
-  int hr = 6;
+  int w = rand_in_range(20,40);
+  int h = rand_in_range(20,40);
+  int offset = rand_in_range(0,w*h-1);
+  int wr = rand_in_range(1,w - (offset % w));
+  int hr = rand_in_range(1, h- (offset/w));
+
     
   unsigned char* src;
-  unsigned char *dst_ipp;
+  unsigned char *dst_ipp,*dst_ffmpeg;
 
   src = (uint8_t*)malloc(h*w);
     
@@ -272,12 +280,23 @@ void test_ippiCopy_8u_C1R_replacement(){
   dst_ipp = (uint8_t*)malloc(h*w);
   memset(dst_ipp,0,h*w);
 
+  dst_ffmpeg = (uint8_t*)malloc(h*w);
+  memset(dst_ffmpeg,0,h*w);
+
   roi.height    = hr;
   roi.width     = wr;
   
   
-  ippiCopy_8u_C1R( src,w,dst_ipp,w,roi);
+  ippiCopy_8u_C1R( src+offset,w,dst_ipp,w,roi);
   print_img("dst_ipp",&dst_ipp, w, h, 1);
+
+  ippiCopy_8u_C1R_ffmpeg(src+offset ,w,dst_ffmpeg ,w,roi);
+  print_img("dst_ffmpeg",&dst_ffmpeg, w, h, 1);
+
+  double d[3] = {0};
+  l2_dist_img(d,&dst_ipp,&dst_ffmpeg,w,h,1);
+
+  Output("distances are %f  img = (%d X %d) offset=%d , roi=%d X %d )\n",d[0],w,h,offset,wr,hr);
   
     return;
 }
