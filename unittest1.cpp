@@ -42,6 +42,8 @@ const int  	dstStride[]
 )
 */
 
+
+
 int rand_in_range(int min,int max){
   return rand() % (max + 1 - min) + min;
 }
@@ -60,6 +62,7 @@ void Output(const char* szFormat, ...)
 #else
 #define Output printf
 #endif
+
 
 void print_img(char* name, uint8_t* img[], int w, int h, int c) {
 
@@ -110,6 +113,44 @@ void l2_dist_img(double distances[], uint8_t* img1[],uint8_t* img2[], int w, int
     }
   }
   return;
+}
+
+double ncc(const unsigned char* im1 , const unsigned char* im2,int sz){
+
+  double* t1 = (double*)malloc(sizeof(double)*sz);
+  double* t2 = (double*)malloc(sizeof(double)*sz);
+  double mean1 = 0;
+  double mean2 = 0;
+  for(int i=0;i<sz;i++){
+    //double X=(((double)rand()/(double)RAND_MAX)/100)-0.005;
+    t1[i] = im1[i]*1.0;//+X;
+    mean1 += t1[i];
+    t2[i] = im2[i]*1.0;
+    mean2 += t2[i];
+    Output("mean1  = %f, mean2 = %f\n",mean1,mean2);
+  }
+  mean1 = mean1 / (1.0*sz);
+  mean2 = mean2 / (1.0*sz);
+
+  Output("mean1  = %f, mean2 = %f\n",mean1,mean2);
+
+  double norm1 = 0;
+  double norm2 = 0;
+  double n = 0;
+  for(int i=0;i<sz;i++){    
+    t1[i] -= mean1;
+    norm1 += t1[i]*t1[i];
+    t2[i] -= mean2;
+    norm2 += t2[i]*t2[i];
+    n += t1[i]*t2[i];
+    Output("n  = %f, norm1 = %f norm2 = %f\n",n,norm1,norm2);
+  }
+  //Output("n  = %f, norm1 = %f norm2 = %f\n",n,norm1,norm2);
+
+  free(t1);
+  free(t2);
+  return n/(sqrt(norm1*norm2));
+  
 }
 
 
@@ -299,8 +340,10 @@ void test_ippiCopy_8u_C1R_replacement(){
 
   double d[1] = {0};
   l2_dist_img(d,&dst_ipp,&dst_ffmpeg,w,h,1);
+  double  n = ncc(dst_ipp,dst_ffmpeg,w*h);
 
-  Output("distances are %f  img = (%d X %d) offset=%d , roi=%d X %d )\n",d[0],w,h,offset,wr,hr);
+  //Output("distances are %f  img = (%d X %d) offset=%d , roi=%d X %d )\n",d[0],w,h,offset,wr,hr);
+  Output("ncc is %f  img = (%d X %d) offset=%d , roi=%d X %d )\n",n,w,h,offset,wr,hr);
   
     return;
 }
@@ -350,7 +393,7 @@ IPPI_INTER_LANCZOS interpolation with Lanczos window.
 */
 
 int  ippiResize_8u_C1R_ffmpeg(const Ipp8u* pSrc, IppiSize srcSize, int srcStep, IppiRect srcRoi, Ipp8u* pDst, int dstStep, IppiSize dstRoiSize, double xFactor, double yFactor, int interpolation) {
-	struct SwsContext *resize;
+	
 	/*
 	srcW	the width of the source image
 		srcH	the height of the source image
@@ -382,7 +425,11 @@ int  ippiResize_8u_C1R_ffmpeg(const Ipp8u* pSrc, IppiSize srcSize, int srcStep, 
 			return -1;
 	}
 	
-	resize = sws_getContext(srcSize.width, srcSize.height, AV_PIX_FMT_YUV444P, dstRoiSize.width, dstRoiSize.height, AV_PIX_FMT_YUV444P, flag, NULL, NULL, NULL);
+	//   
+	//SwsContext * ctx = sws_getContext(srcSize.width, srcSize.height, AV_PIX_FMT_RGB24, srcSize.width, srcSize.height, AV_PIX_FMT_YUV444P, 0, NULL, NULL, NULL);
+	SwsContext *ctx = sws_getContext(srcSize.width, srcSize.height, AV_PIX_FMT_GRAY8,
+		                                     dstRoiSize.width, dstRoiSize.height, AV_PIX_FMT_GRAY8,
+		                                     flag, NULL, NULL, NULL);//flag, srcFilter, dstFilter and params
 
 	/*
 	c	the scaling context previously created with sws_getContext()
@@ -403,6 +450,26 @@ dstStride	the array containing the strides for each plane of the destination ima
 		const int  	dstStride[]
 	)
 	*/
+	//ippiResize_8u_C1R_ffmpeg(const Ipp8u* pSrc, IppiSize srcSize, int srcStep, IppiRect srcRoi, 
+	                               //Ipp8u* pDst, int dstStep, IppiSize dstRoiSize, double xFactor, double yFactor, int interpolation) {
+	/*
+	const uint8_t* srcSlice[3] = {pSrc,NULL,NULL};
+	const int srcStride[3] = { srcRoi.width,0,0};
+	int srcSliceY = srcSize.width*srcRoi.y + srcRoi.x;
+	int srcSliceH = srcRoi.width;
+	uint8_t* dst[3] = { pDst,NULL,NULL };
+	const int  	dstStride[3] = { dstRoiSize.width,0,0};
+	*/
+	const uint8_t* srcSlice[1] = { pSrc };
+	const int srcStride[1] = { srcRoi.width };
+	int srcSliceY = srcSize.width*srcRoi.y + srcRoi.x;
+	int srcSliceH = srcRoi.height;
+	uint8_t* dst[1] = { pDst };
+	const int  	dstStride[1] = { dstRoiSize.width };
+	
+	int t = sws_scale(ctx, srcSlice, srcStride, srcSliceY, srcSliceH, &pDst, dstStride);
+
+	
 }
 
 void test_ippiResize_8u_C1R_replacement(){
@@ -410,17 +477,23 @@ void test_ippiResize_8u_C1R_replacement(){
   IppiSize srcSize,dstSize;
   IppiRect srcRect;
   
-  int w = rand_in_range(100,200);
-  int h = rand_in_range(100,200);
+  int w = rand_in_range(50,70);
+  int h = rand_in_range(50,70);
   int offset = rand_in_range(0,w*h-1);
-  int wr = rand_in_range(1,w - (offset % w));
-  int hr = rand_in_range(1, h- (offset/w));
-
-  srcRect.x = rand_in_range(0, w-1);
-  srcRect.y = rand_in_range(0, h-1);
+ 
+  /*
+  srcRect.x = rand_in_range(30, w-1);
+  srcRect.y = rand_in_range(30, h-1);
   
   srcRect.width = rand_in_range(1, w-srcRect.x);
   srcRect.height = rand_in_range(1, h - srcRect.y);
+  */
+
+  srcRect.x = 0;
+  srcRect.y = 0;
+
+  srcRect.width = w;
+  srcRect.height = h;
 
   double xfactor = 0.8;
   double yfactor = 1.2;
@@ -445,20 +518,23 @@ void test_ippiResize_8u_C1R_replacement(){
   /*                                     1              2            3                 4              5          6                7                   8              9            10   
 IppStatus ippiResize_8u_C1R(const Ipp8u* pSrc, IppiSize srcSize, int srcStep, IppiRect srcRoi, Ipp8u* pDst, int dstStep, IppiSize dstRoiSize, double xFactor, double yFactor, int interpolation);
   */
-  
+  /*  
   ippiResize_8u_C1R( src,    srcSize,w,srcRect,
 	                 dst_ipp,dstSize.width,dstSize,
 	                 xfactor,yfactor,interpolation);
+					 
   print_img("dst_ipp",&dst_ipp, dstSize.width, dstSize.height, 1);
-
+  */
   dst_ffmpeg = (uint8_t*)malloc(dstSize.height * dstSize.width);
   memset(dst_ffmpeg,0, dstSize.height * dstSize.width);
 
   ippiResize_8u_C1R_ffmpeg(src, srcSize, w, srcRect,
-	  dst_ipp, dstSize.width, dstSize,
+	  dst_ffmpeg, dstSize.width, dstSize,
 	  xfactor, yfactor, interpolation);
-  print_img("dst_ffmpeg", &dst_ffmpeg, dstSize.width, dstSize.height, 1);
-
+	  
+  //print_img("dst_ffmpeg", &dst_ffmpeg, dstSize.width, dstSize.height, 1);
+  double n  = ncc(dst_ipp,dst_ffmpeg,dstSize.width*dstSize.height);
+  Output("ncc is %f\n",n);
 }
 
 #define W 24
@@ -474,9 +550,9 @@ int main() {
   //test_ippiRGBToYCbCr_8u_P3R_replacement();
   //test_ippiCopy_8u_C1R_replacement();
   test_ippiResize_8u_C1R_replacement();
-  test_ippiResize_8u_C1R_replacement();
-  test_ippiResize_8u_C1R_replacement();
-  test_ippiResize_8u_C1R_replacement();
+  //test_ippiResize_8u_C1R_replacement();
+  //test_ippiResize_8u_C1R_replacement();
+  //test_ippiResize_8u_C1R_replacement();
 
   /*
 	int w = 3;
