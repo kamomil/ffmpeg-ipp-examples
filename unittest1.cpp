@@ -11,6 +11,9 @@ extern "C"
 //#include "media_io.h"
 #ifdef WIN32
 #include <windows.h>
+#include <random>
+std::random_device rd;
+std::mt19937 gen;
 //#include <ctime>//this cause compilation errors
 #endif
 
@@ -42,7 +45,10 @@ const int  	dstStride[]
 )
 */
 
-
+double rand_in_range_double(double min, double max) {
+	double X= ((double)rand())/((double)RAND_MAX);//X is in [0,1]
+	return (X*(max - min)) + min;
+}
 
 int rand_in_range(int min,int max){
   return rand() % (max + 1 - min) + min;
@@ -127,12 +133,12 @@ double ncc(const unsigned char* im1 , const unsigned char* im2,int sz){
     mean1 += t1[i];
     t2[i] = im2[i]*1.0;
     mean2 += t2[i];
-    Output("mean1  = %f, mean2 = %f\n",mean1,mean2);
+    //Output("mean1  = %f, mean2 = %f\n",mean1,mean2);
   }
   mean1 = mean1 / (1.0*sz);
   mean2 = mean2 / (1.0*sz);
 
-  Output("mean1  = %f, mean2 = %f\n",mean1,mean2);
+  //Output("mean1  = %f, mean2 = %f\n",mean1,mean2);
 
   double norm1 = 0;
   double norm2 = 0;
@@ -143,7 +149,7 @@ double ncc(const unsigned char* im1 , const unsigned char* im2,int sz){
     t2[i] -= mean2;
     norm2 += t2[i]*t2[i];
     n += t1[i]*t2[i];
-    Output("n  = %f, norm1 = %f norm2 = %f\n",n,norm1,norm2);
+    //Output("n  = %f, norm1 = %f norm2 = %f\n",n,norm1,norm2);
   }
   //Output("n  = %f, norm1 = %f norm2 = %f\n",n,norm1,norm2);
 
@@ -462,44 +468,51 @@ dstStride	the array containing the strides for each plane of the destination ima
 	*/
 	const uint8_t* srcSlice[1] = { pSrc };
 	const int srcStride[1] = { srcRoi.width };
-	int srcSliceY = srcSize.width*srcRoi.y + srcRoi.x;
+	int srcSliceY = srcRoi.y;// srcSize.width*srcRoi.y + srcRoi.x;
 	int srcSliceH = srcRoi.height;
 	uint8_t* dst[1] = { pDst };
 	const int  	dstStride[1] = { dstRoiSize.width };
 	
 	int t = sws_scale(ctx, srcSlice, srcStride, srcSliceY, srcSliceH, &pDst, dstStride);
 
-	
+	return 0;
 }
 
-void test_ippiResize_8u_C1R_replacement(){
+void test_ippiResize_8u_C1R_replacement(unsigned char* src,int w,int h){
   
   IppiSize srcSize,dstSize;
   IppiRect srcRect;
   
-  int w = rand_in_range(50,70);
-  int h = rand_in_range(50,70);
+  //int w = rand_in_range(50,70);
+  //int h = rand_in_range(50,70);
   int offset = rand_in_range(0,w*h-1);
  
-  /*
-  srcRect.x = rand_in_range(30, w-1);
-  srcRect.y = rand_in_range(30, h-1);
   
-  srcRect.width = rand_in_range(1, w-srcRect.x);
-  srcRect.height = rand_in_range(1, h - srcRect.y);
-  */
-
+  srcRect.x = 0; //rand_in_range(w / 3, w - 1);
+  srcRect.y = 10;// rand_in_range(h / 3, h - 1);
+  
+  srcRect.width = w;// rand_in_range((w - srcRect.x) / 3, w - srcRect.x);
+  srcRect.height = 30;// rand_in_range((h - srcRect.y) / 3, h - srcRect.y);
+  
+  for (int hi = 10; hi < 40; hi++) {
+	  for (int wi = 10; wi < 40; wi++) {
+		  Output("%d ", src[wi + w*hi]);
+	  }
+	  Output("\n");
+  }
+  /*
   srcRect.x = 0;
   srcRect.y = 0;
 
   srcRect.width = w;
   srcRect.height = h;
+  */
 
-  double xfactor = 0.8;
-  double yfactor = 1.2;
+  double xfactor = 1;// rand_in_range_double(0.1, 1.5);
+  double yfactor = 1;// rand_in_range_double(0.1, 1.5);
   int interpolation = ( xfactor >= 1.0 || yfactor >= 1.0 ) ? IPPI_INTER_LINEAR : IPPI_INTER_SUPER;
 
-  unsigned char* src = (uint8_t*)malloc(h*w);
+  //unsigned char* src = (uint8_t*)malloc(h*w);
   unsigned char *dst_ipp,*dst_ffmpeg;
 
   srcSize.width  = w;
@@ -507,7 +520,7 @@ void test_ippiResize_8u_C1R_replacement(){
   dstSize.width  = (int)( xfactor * srcRect.width);
   dstSize.height = (int)( yfactor * srcRect.height);
     
-  fill_img(&src, w, h, 1,1);
+  //fill_img(&src, w, h, 1,1);
   //print_img("src",&src, w, h, 1);
   
   dst_ipp = (uint8_t*)malloc(dstSize.height * dstSize.width);
@@ -518,13 +531,13 @@ void test_ippiResize_8u_C1R_replacement(){
   /*                                     1              2            3                 4              5          6                7                   8              9            10   
 IppStatus ippiResize_8u_C1R(const Ipp8u* pSrc, IppiSize srcSize, int srcStep, IppiRect srcRoi, Ipp8u* pDst, int dstStep, IppiSize dstRoiSize, double xFactor, double yFactor, int interpolation);
   */
-  /*  
+  
   ippiResize_8u_C1R( src,    srcSize,w,srcRect,
 	                 dst_ipp,dstSize.width,dstSize,
 	                 xfactor,yfactor,interpolation);
 					 
   print_img("dst_ipp",&dst_ipp, dstSize.width, dstSize.height, 1);
-  */
+  
   dst_ffmpeg = (uint8_t*)malloc(dstSize.height * dstSize.width);
   memset(dst_ffmpeg,0, dstSize.height * dstSize.width);
 
@@ -532,98 +545,210 @@ IppStatus ippiResize_8u_C1R(const Ipp8u* pSrc, IppiSize srcSize, int srcStep, Ip
 	  dst_ffmpeg, dstSize.width, dstSize,
 	  xfactor, yfactor, interpolation);
 	  
-  //print_img("dst_ffmpeg", &dst_ffmpeg, dstSize.width, dstSize.height, 1);
+  print_img("dst_ffmpeg", &dst_ffmpeg, dstSize.width, dstSize.height, 1);
   double n  = ncc(dst_ipp,dst_ffmpeg,dstSize.width*dstSize.height);
   Output("ncc is %f\n",n);
+  exit(1);
 }
 
 #define W 24
 #define H 24
-int main() {
+static int decode_write_frame(AVCodecContext *avctx,
+                              AVFrame *frame, AVPacket *pkt, int last)
+{
+    
 
-#ifdef WIN32 
-	srand(1);//time is not recognized and there are problems
-#else
-  srand(time(NULL));
-#endif
+  for(int i=0;i<AV_NUM_DATA_POINTERS && frame->data[i];i++){
+    Output("frame->data[%d] = %p\n",i,frame->data[i]);
+    Output("linesize[%d]=%u frame->width = %u, frame->height = %u\n",i,frame->linesize[i],frame->width, frame->height);
+    for(int j=0;j<10;j++){
+      Output("%u ",frame->data[i][j]);
+    }
+    Output("\n\n");
+	if (i == 0)
+		break;
+  }
+  test_ippiResize_8u_C1R_replacement(frame->data[0],frame->linesize[0],frame->height);
+  
 
-  //test_ippiRGBToYCbCr_8u_P3R_replacement();
-  //test_ippiCopy_8u_C1R_replacement();
-  test_ippiResize_8u_C1R_replacement();
-  //test_ippiResize_8u_C1R_replacement();
-  //test_ippiResize_8u_C1R_replacement();
-  //test_ippiResize_8u_C1R_replacement();
+ 
+        
+  
+  
+  return 0;
+}
+static void pgm_save(unsigned char *buf, int wrap, int xsize, int ysize,char *filename)
+{
+	FILE *f;
+	int i;
 
-  /*
-	int w = 3;
-	int h = 3;
-	uint8_t* rgb24Data = (uint8_t*)malloc(3 * h*w);//3 is because every pixel is reperesented by 3 bytes
-	fill_img(&rgb24Data, w, h, 1);
-	print_img(&rgb24Data, w, h, 1);
-
-	uint8_t* dst[3];// = (uint8_t* const)malloc(3 * imgHeight*imgWidth);
-	SwsContext * ctx;
-	dst[0] = (uint8_t* const)malloc(h*w);
-	dst[1] = (uint8_t* const)malloc(h*w);
-	dst[2] = (uint8_t* const)malloc(h*w);
-	fill_img(dst, w, h, 3);
-	print_img(dst, w, h, 3);
-
-	int dst_stride[3] = { w, w, w };
-	
-	ctx = sws_getContext(w, h,AV_PIX_FMT_RGB24, w, h,AV_PIX_FMT_YUV420P, 0, NULL, NULL, NULL);
-	if (!ctx) {
-
-		Output("ctx is null\n");
-		return 1;
+	f = fopen(filename, "w");
+	if (!f) {
+		Output("failed opening %s\n",filename);
+		return;
 	}
-	uint8_t * inData[1] = { rgb24Data }; // RGB24 have one plane
-	int inLinesize[1] = { 3 * w }; // RGB stride
-	//
-	//int sws_scale(struct SwsContext *c, const uint8_t *const srcSlice[],
-	//const int srcStride[], int srcSliceY, int srcSliceH,
-	//uint8_t *const dst[], const int dstStride[]);
-	//
-	
-	sws_scale(ctx, &rgb24Data, inLinesize, 0, h, dst, dst_stride);
-	print_img(dst, w, h, 3);
-	Output("hjghjghjg\n");
+	if (fprintf(f, "P5\n%d %d\n%d\n", xsize, ysize, 255) < 0) {
+		Output("failed writing to %s\n", filename);
+		return;
+	}
+	for (i = 0; i < ysize; i++) {
+		int s = fwrite(buf + i * wrap, 1, xsize, f);
+	}
+	fclose(f);
+}
 
-	//////////////////////////////////////////////////////
-	
-	uint8_t *rgb_data = (uint8_t *) malloc(W*H * 4);
-	uint8_t *rgb_src3[3] = { rgb_data, NULL, NULL };
-	int rgb_stride3[3] = { 4 * W, 0, 0 };
-	uint8_t *rgb_src1[1] = { rgb_data };
-	int rgb_stride1[1] = { 4*W };
+#define INBUF_SIZE 4096
+static void video_decode_example(const char *filename)
+{
+    AVCodec *codec;
+    AVCodecContext *c= NULL;
+    int frame_count;
+    FILE *f;
+    AVFrame *frame;
+    uint8_t inbuf[INBUF_SIZE + AV_INPUT_BUFFER_PADDING_SIZE];
+    AVPacket avpkt;
+
+    av_init_packet(&avpkt);
+
+    /* set end of buffer to 0 (this ensures that no overreading happens for damaged mpeg streams) */
+    memset(inbuf + INBUF_SIZE, 0, AV_INPUT_BUFFER_PADDING_SIZE);
+
+    Output("Decode video file %s \n", filename);
+
+    /* find the mpeg1 video decoder */
+    codec = avcodec_find_decoder(AV_CODEC_ID_MPEG1VIDEO);
+    if (!codec) {
+        fprintf(stderr, "Codec not found\n");
+        exit(1);
+    }
+
+    c = avcodec_alloc_context3(codec);
+    if (!c) {
+        fprintf(stderr, "Could not allocate video codec context\n");
+        exit(1);
+    }
+
+    if (codec->capabilities & AV_CODEC_CAP_TRUNCATED)
+        c->flags |= AV_CODEC_FLAG_TRUNCATED; // we do not send complete frames
+
+    /* For some codecs, such as msmpeg4 and mpeg4, width and height
+       MUST be initialized there because this information is not
+       available in the bitstream. */
+
+    /* open it */
+    if (avcodec_open2(c, codec, NULL) < 0) {
+        fprintf(stderr, "Could not open codec\n");
+        exit(1);
+    }
+
+    f = fopen(filename, "rb");
+    if (!f) {
+        fprintf(stderr, "Could not open %s\n", filename);
+        exit(1);
+    }
+
+    frame = av_frame_alloc();
+    if (!frame) {
+        fprintf(stderr, "Could not allocate video frame\n");
+        exit(1);
+    }
+
+    frame_count = 0;
+    int max_frame = 1;
+	for (;;) {
+		avpkt.size = fread(inbuf, 1, INBUF_SIZE, f);
+		if (avpkt.size == 0)
+			break;
+
+		/* NOTE1: some codecs are stream based (mpegvideo, mpegaudio)
+		   and this is the only method to use them because you cannot
+		   know the compressed data size before analysing it.
+
+		   BUT some other codecs (msmpeg4, mpeg4) are inherently frame
+		   based, so you must call them with all the data for one
+		   frame exactly. You must also initialize 'width' and
+		   'height' before initializing them. */
+
+		   /* NOTE2: some codecs allow the raw parameters (frame size,
+			  sample rate) to be changed at any frame. We handle this, so
+			  you should also take care of it */
+
+			  /* here, we use a stream based decoder (mpeg1video), so we
+				 feed decoder and see if it could decode a frame */
+		avpkt.data = inbuf;
+		while (avpkt.size > 0) {
+
+			int len, got_frame;
+			len = avcodec_decode_video2(c, frame, &got_frame, &avpkt);
+			if (len < 0) {
+				fprintf(stderr, "Error while decoding frame %d\n", frame_count);
+				return;// len;
+			}
+			if (got_frame) {
+
+				if (frame_count % 100 == 0) {
+					Output("frame %d:\n", frame_count);
+					if (decode_write_frame(c, frame, &avpkt, 0) < 0) {
+						Output("decode_write_frame failed\n");
+						exit(1);
+					}
+					char buf[1024];
+					/* the picture is allocated by the decoder, no need to free it */
+					//in VS the file will be written to UnitTest1 directory
+					snprintf(buf, sizeof(buf), "test%02d.pgm", frame_count);
+					Output("writing frame %d to file '%s'\n", frame_count, buf);
+					pgm_save(frame->data[0], frame->linesize[0], frame->width, frame->height, buf);
+				}
+
+				
+
+				frame_count++;
+				//if(frame_count>max_frame)
+				//  return;
+			}
+			if (avpkt.data) {
+				avpkt.size -= len;
+				avpkt.data += len;
+			}
 
 
-	uint8_t *data = (uint8_t *) malloc(3 * W*H);
-	uint8_t *dst3[3] = { data, data + W*H, data + W*H * 2 };
-	int stride[3] = { W, W, W };
-	
-	
-	struct SwsContext *sws;
-	sws = sws_getContext(W , H , AV_PIX_FMT_RGB32, W, H, AV_PIX_FMT_YUV420P, 2, NULL, NULL, NULL);
-
-	srand(0);
-	for (int y = 0; y<H; y++) {
-		for (int x = 0; x<W * 4; x++) {
-			rgb_data[x + y * 4 * W] = rand();
 		}
 	}
-	sws_scale(sws, rgb_src3, rgb_stride3, 0, H, dst3, stride);
-	
-	print_img(dst, W, H, 3);
+    
+    /* some codecs, such as MPEG, transmit the I and P frame with a
+       latency of one frame. You must do the following to have a
+       chance to get the last frame of the video */
+    avpkt.data = NULL;
+    avpkt.size = 0;
+    decode_write_frame(c, frame, &avpkt, 1);
 
-	sws_scale(sws, rgb_src1, rgb_stride1, 0, H, dst3, stride);
-	print_img(dst, W, H, 3);
-	
+    fclose(f);
 
-	//selfTest(src, stride, W, H);
-	/////////////////////////////////////////////////////////
+    avcodec_close(c);
+    av_free(c);
+    av_frame_free(&frame);
+    Output("\n");
+}
 
-	*/
-  return 0;
 
+
+int main(int argc, char **argv)
+{
+#ifdef WIN32 
+	//std::random_device rd;	
+	/*std::mt19937gen(rd());*/
+	srand(54);
+#else
+	srand(time(NULL));
+#endif
+
+	avcodec_register_all();
+    if (argc < 2) {
+      Output("usage: %s filename\n",argv[0]);
+      return 1;
+    }
+    //char* filename = argv[1];   
+    video_decode_example(argv[1]);
+ 
+    return 0;
 }
