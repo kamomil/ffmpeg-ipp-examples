@@ -286,6 +286,12 @@ int  ippiResize_8u_C1R_ffmpeg(const Ipp8u* pSrc, IppiSize srcSize, int srcStep, 
 	SwsContext *ctx = sws_getContext(srcRoi.width, srcRoi.height, AV_PIX_FMT_GRAY8,
 		                                     dstRoiSize.width, dstRoiSize.height, AV_PIX_FMT_GRAY8,
 		                                     flag, NULL, NULL, NULL);//flag, srcFilter, dstFilter and params
+
+	if (!ctx) {
+		Output("error: sws_getContext failed with values: srcRoi.width=%d, srcRoi.height=%d dstRoiSize.width=%d, dstRoiSize.height=%d flag=%d\n",
+			srcRoi.width, srcRoi.height,dstRoiSize.width, dstRoiSize.height,flag);
+		return 1;
+	}
 	/*
 	c	the scaling context previously created with sws_getContext()
 srcSlice	the array containing the pointers to the planes of the source slice
@@ -300,10 +306,10 @@ dstStride	the array containing the strides for each plane of the destination ima
 	int srcSliceY = 0;
 	int srcSliceH = srcRoi.height;
 	uint8_t* dst[4] = { pDst,NULL,NULL,NULL };
-	const int  dstStride[4] = { dstRoiSize.width,0,0,0};
+	const int  dstStride[4] = { dstStep,0,0,0};
 
 		
-	int t = sws_scale(ctx, srcSlice, srcStride, srcSliceY, srcSliceH, &pDst, dstStride);
+	int t = sws_scale(ctx, srcSlice, srcStride, srcSliceY, srcSliceH, dst, dstStride);
 	if(t == 0)
 	    Output("error: sws_scale failed\n");
 	else
@@ -315,66 +321,61 @@ void test_ippiResize_8u_C1R_replacement(unsigned char* src,int w,int h){
   
   IppiSize srcSize,dstSize;
   IppiRect srcRect;
-  
-  //int w = rand_in_range(50,70);
-  //int h = rand_in_range(50,70);
-  int offset = rand_in_range(0,w*h-1);
- 
-  
-  srcRect.x = 10; //rand_in_range(w / 3, w - 1);
-  srcRect.y = 10;// rand_in_range(h / 3, h - 1);
-  
-  srcRect.width = 30;// rand_in_range((w - srcRect.x) / 3, w - srcRect.x);
-  srcRect.height = 30;// rand_in_range((h - srcRect.y) / 3, h - srcRect.y);
-  
-  for (int hi = 10; hi < 40; hi++) {
-	  for (int wi = 10; wi < 40; wi++) {
-		  Output("%d ", src[wi + w*hi]);
-	  }
-	  Output("\n");
-  }
- 
-  double xfactor = 1.5;// rand_in_range_double(0.1, 1.5);
-  double yfactor = 1.5;// rand_in_range_double(0.1, 1.5);
-  int interpolation = ( xfactor >= 1.0 || yfactor >= 1.0 ) ? IPPI_INTER_LINEAR : IPPI_INTER_SUPER;
+  unsigned char *dst_ipp, *dst_ffmpeg;
+  double xfactor, yfactor;
+  int interpolation;
 
-  unsigned char *dst_ipp,*dst_ffmpeg;
-
-  srcSize.width  = w;
+  srcSize.width = w;
   srcSize.height = h;
-  dstSize.width  = (int)( xfactor * srcRect.width);
-  dstSize.height = (int)( yfactor * srcRect.height);
-    
-  //fill_img(&src, w, h, 1,1);
-  //print_img("src",&src, w, h, 1);
-  
+
+  if (w < 30 || h < 30) {
+	  Output("warning: width or height too small\n");
+	  return;
+  }
+  do {
+	  srcRect.x = rand_in_range(w / 3, w - 1);
+	  srcRect.y = rand_in_range(h / 3, h - 1);
+
+	  srcRect.width = rand_in_range((w - srcRect.x) / 3, w - srcRect.x);
+	  srcRect.height = rand_in_range((h - srcRect.y) / 3, h - srcRect.y);
+
+	  xfactor = rand_in_range_double(0.1, 1.5);
+	  yfactor = rand_in_range_double(0.1, 1.5);
+	  interpolation = (xfactor >= 1.0 || yfactor >= 1.0) ? IPPI_INTER_LINEAR : IPPI_INTER_SUPER;
+
+	  dstSize.width = (int)(xfactor * srcRect.width);
+	  dstSize.height = (int)(yfactor * srcRect.height);
+  }
+	while (srcRect.x < 3 || srcRect.y < 3 || srcRect.width < 3 || srcRect.height < 3 || dstSize.width < 3 || dstSize.height < 3);
+
+
   dst_ipp = (uint8_t*)malloc(dstSize.height * dstSize.width);
   memset(dst_ipp,0, dstSize.height * dstSize.width);
   
- 
-
   /*                                     1              2            3                 4              5          6                7                   8              9            10   
 IppStatus ippiResize_8u_C1R(const Ipp8u* pSrc, IppiSize srcSize, int srcStep, IppiRect srcRoi, Ipp8u* pDst, int dstStep, IppiSize dstRoiSize, double xFactor, double yFactor, int interpolation);
   */
-  /*
+  
   ippiResize_8u_C1R( src,    srcSize,w,srcRect,
 	                 dst_ipp,dstSize.width,dstSize,
 	                 xfactor,yfactor,interpolation);
 					 
-  print_img("dst_ipp",&dst_ipp, dstSize.width, dstSize.height, 1);
-  */
-  dst_ffmpeg = (uint8_t*)malloc(dstSize.height * dstSize.width);
+ // print_img("dst_ipp",&dst_ipp, dstSize.width, dstSize.height, 1);
+  
+  dst_ffmpeg = (uint8_t*)malloc(dstSize.height * dstSize.width+100);
   memset(dst_ffmpeg,0, dstSize.height * dstSize.width);
 
   ippiResize_8u_C1R_ffmpeg(src, srcSize, w, srcRect,
 	  dst_ffmpeg, dstSize.width, dstSize,
 	  xfactor, yfactor, interpolation);
 	  
-  print_img("dst_ffmpeg", &dst_ffmpeg, dstSize.width, dstSize.height, 1);
+  //print_img("dst_ffmpeg", &dst_ffmpeg, dstSize.width, dstSize.height, 1);
+  double n  = ncc(dst_ipp,dst_ffmpeg,dstSize.width*dstSize.height);
+  int x = 1;
   //double n  = ncc(dst_ipp,dst_ffmpeg,dstSize.width*dstSize.height);
-  //double n  = ncc(dst_ipp,dst_ffmpeg,dstSize.width*dstSize.height);
-  //Output("ncc is %f\n",n);
-  exit(1);
+  //Output("ncc is %d\n",n*1000);
+  //exit(1);
+  return;
 }
 
 #define W 24
