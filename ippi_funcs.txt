@@ -1,4 +1,4 @@
-ippiAlphaCompC_8u_C1R
+ippiAlphaCompC_8u_C1R - this is used foe watermark , it relates to questions in stakcoverflow that relates to adfding watermarks
 ippiAlphaCompC_8u_C1R
 ippiAlphaCompC_8u_C1R
 ippiAlphaCompC_8u_C1R
@@ -51,10 +51,6 @@ ippiResize_8u_C1R
 ippiResize_8u_C1R
 ippiResize_8u_C1R
 ippiResize_8u_C1R
-ippiResizeSqrPixel_8u_C1R
-ippiResizeSqrPixel_8u_C1R
-ippiResizeSqrPixel_8u_C1R
-ippiResizeSqrPixel_8u_C1R
 ippiRGBToYCbCr_8u_P3R
 ippiRGBToYCbCr_8u_P3R
 ippiSet_8u_C1R
