@@ -1,0 +1,172 @@
+#ifndef TEST_UTILS
+#define TEST_UTILS
+
+#ifdef WIN32
+#include <windows.h>
+#include <random>
+#endif
+
+//#include <random>
+#include <stdlib.h>
+#include <stdio.h>
+#include <time.h>
+#include <math.h>
+
+double rand_in_range_double(double min, double max) {
+	double X= ((double)rand())/((double)RAND_MAX);//X is in [0,1]
+	return (X*(max - min)) + min;
+}
+
+int rand_in_range(int min,int max){
+  return rand() % (max + 1 - min) + min;
+}
+
+#ifdef WIN32
+void Output(const char* szFormat, ...)
+{
+	char szBuff[1024];
+	va_list arg;
+	va_start(arg, szFormat);
+	_vsnprintf(szBuff, sizeof(szBuff), szFormat, arg);
+	va_end(arg);
+
+	OutputDebugString(szBuff);
+}
+#else
+#define Output printf
+#endif
+
+
+void print_img(char* name, unsigned char* img[], int w, int h, int c) {
+
+  Output("Printing img '%s' (%p):\n",name, img);
+  for (int ci = 0; ci<c; ci++) {
+    if (!img[ci]) {
+      Output("Channel %d is NULL\n", ci);
+    }
+    else {
+      Output("Channel %d:\n", ci);
+      for (int hi = 0; hi < h; hi++) {
+	for (int wi = 0; wi < w; wi++) {
+	  unsigned char p = img[ci][wi + hi*w];
+	    Output("%u%s", p, p > 99 ? " " : (p > 10 ? "  " : "   "));
+	}
+	Output("\n");
+			}
+    }
+  }
+  return;
+}
+
+void l2_dist_img(double distances[], unsigned char* img1[],unsigned char* img2[], int w, int h, int c) {
+
+  for (int ci = 0; ci<c; ci++) {
+    if ( (!img1[ci] && img2[ci]) || (img1[ci] && !img2[ci]) ) {
+      Output("ERROR: channel %d: img1[ci]=%p img2[ci]=%p\n", ci,img1[ci],img2[ci]);
+      return;
+    }
+  }
+ 
+  for (int ci = 0; ci<c; ci++) {
+    if (!img1[ci]) {
+      Output("Channel %d is NULL\n", ci);
+    }
+    else {
+
+      unsigned int s = 0;
+      distances[ci]=0;
+      for (int hi = 0; hi < h; hi++) {
+	for (int wi = 0; wi < w; wi++) {
+	  unsigned int m1 = (unsigned int)img1[ci][wi + hi*w];
+	  unsigned int m2 = (unsigned int)img2[ci][wi + hi*w]; 
+	  s += (m1-m2)*(m1-m2);
+	}	
+      }
+      distances[ci] = sqrt(s);
+    }
+  }
+  return;
+}
+
+double ncc(const unsigned char* im1 , const unsigned char* im2,int sz){
+
+  double* t1 = (double*)malloc(sizeof(double)*sz);
+  double* t2 = (double*)malloc(sizeof(double)*sz);
+  double mean1 = 0;
+  double mean2 = 0;
+  for(int i=0;i<sz;i++){
+    //double X=(((double)rand()/(double)RAND_MAX)/100)-0.005;
+    t1[i] = im1[i]*1.0;//+X;
+    mean1 += t1[i];
+    t2[i] = im2[i]*1.0;
+    mean2 += t2[i];
+    //Output("mean1  = %f, mean2 = %f\n",mean1,mean2);
+  }
+  mean1 = mean1 / (1.0*sz);
+  mean2 = mean2 / (1.0*sz);
+
+  //Output("mean1  = %f, mean2 = %f\n",mean1,mean2);
+
+  double norm1 = 0;
+  double norm2 = 0;
+  double n = 0;
+  for(int i=0;i<sz;i++){    
+    t1[i] -= mean1;
+    norm1 += t1[i]*t1[i];
+    t2[i] -= mean2;
+    norm2 += t2[i]*t2[i];
+    n += t1[i]*t2[i];
+    //Output("n  = %f, norm1 = %f norm2 = %f\n",n,norm1,norm2);
+  }
+  //Output("n  = %f, norm1 = %f norm2 = %f\n",n,norm1,norm2);
+
+  free(t1);
+  free(t2);
+  return n/(sqrt(norm1*norm2));
+  
+}
+
+
+void fill_img(unsigned char* img[],int w,int h,int c,char with_rand){
+
+  for(int ci=0;ci<c;ci++){
+    if(img[ci]){
+      for(int i=0;i<w*h;i++){
+	img[ci][i] = with_rand ? (unsigned char)rand() : (unsigned char)i;
+      }
+    }
+  }
+  return;
+}
+
+
+
+void planar_to_packed(unsigned char* src[] , unsigned char *dst ,int w,int h, int c){
+
+  int j =0;
+  for(int i=0;i<w*h;i++)
+    for(int ic=0;ic<c;ic++)
+      if(src[ic])
+	dst[j++] = src[ic][i];
+}
+static void pgm_save(unsigned char *buf, int wrap, int xsize, int ysize,char *filename)
+{
+	FILE *f;
+	int i;
+
+	f = fopen(filename, "w");
+	if (!f) {
+		Output("failed opening %s\n",filename);
+		return;
+	}
+	if (fprintf(f, "P5\n%d %d\n%d\n", xsize, ysize, 255) < 0) {
+		Output("failed writing to %s\n", filename);
+		return;
+	}
+	for (i = 0; i < ysize; i++) {
+		int s = fwrite(buf + i * wrap, 1, xsize, f);
+	}
+	fclose(f);
+}
+
+#endif
