@@ -1,3 +1,4 @@
-void RGBtoYCbCr_ipp(unsigned char* src[3] , unsigned char *dst[] , int width,int height);
-void RGBtoYCbCr_ffmpeg(unsigned char* src[] , unsigned char *dst[] ,int w, int h);
-int test_ippiRGBToYCbCr_8u_P3R_replacement();
+#ifndef RGBTOYCBCR_8U_P3R_TEST
+#define RGBTOYCBCR_8U_P3R_TEST 
+int test_ippiRGBToYCbCr_8u_P3R_replacement(AVFrame *frame, double ncc_plain_val[3]);
+#endif

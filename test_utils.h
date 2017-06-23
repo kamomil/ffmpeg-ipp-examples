@@ -56,8 +56,8 @@ void pgm_save(unsigned char *buf, int wrap, int xsize, int ysize,char *filename)
 
 int convert_to_format(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[], AVPixelFormat dst_format);
 
-void convert_to_GBRP(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[]);
+int convert_to_GBRP(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[]);
 
-void convert_to_RGB24(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[]);
+int convert_to_RGB24(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[]);
 
 #endif

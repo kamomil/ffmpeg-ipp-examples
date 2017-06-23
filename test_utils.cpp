@@ -118,6 +118,7 @@ double ncc(const unsigned char* im1 , const unsigned char* im2,int sz){
   mean2 = mean2 / (1.0*sz);
 
   //Output("mean1  = %f, mean2 = %f\n",mean1,mean2);
+  //Output("ncc: sz = %d\n",sz);
 
   double norm1 = 0;
   double norm2 = 0;
@@ -132,6 +133,10 @@ double ncc(const unsigned char* im1 , const unsigned char* im2,int sz){
   }
   //Output("n  = %f, norm1 = %f norm2 = %f\n",n,norm1,norm2);
 
+  if(norm1<0.01 || norm2<0.01){
+    Output("nnc: WARNING: norms might be too small: norm1=%f norm2=%f\n",norm1,norm2);
+  }
+  
   free(t1);
   free(t2);
   return n/(sqrt(norm1*norm2));
@@ -203,7 +208,7 @@ int convert_to_format(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[], AVP
 }
 
 
-void convert_to_GBRP(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[])
+int convert_to_GBRP(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[])
 {
 
   int w = f_in->width;
@@ -218,22 +223,16 @@ void convert_to_GBRP(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[])
   
   if(!dst[0] || !dst[1] || !dst[2]){
     Output("convert_to_GBRP: allocation failure\n");
-    return;
+    return -1;
   }
   dst_stride[0] =  dst_stride[1] = dst_stride[2] = w;
   dst_stride[3] = 0;
   
-  convert_to_format(f_in, dst ,dst_stride, AV_PIX_FMT_GBRP);
-
-  //print_img("gbrp", dst,  w,  5,  3);
-
-
-  //print_img("rgb_p", &packed,  w*3,  5,  1);
-
+  return convert_to_format(f_in, dst ,dst_stride, AV_PIX_FMT_GBRP);
 
  }
 
-void convert_to_RGB24(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[])
+int convert_to_RGB24(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[])
 {
 
   int w = f_in->width;
@@ -246,11 +245,11 @@ void convert_to_RGB24(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[])
 
   if(!dst[0]){
     Output("convert_to_RGB24: allocation failure\n");
-    return;
+    return -1;
   }
   dst_stride[0] =  w*3;
   dst_stride[1] = dst_stride[2] = dst_stride[3] = 0;
-  convert_to_format(f_in, dst ,dst_stride, AV_PIX_FMT_RGB24);
+  return convert_to_format(f_in, dst ,dst_stride, AV_PIX_FMT_RGB24);
 
   //print_img("rgb24", dst,  w*3,  5,  1);
   

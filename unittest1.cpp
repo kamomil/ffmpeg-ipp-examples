@@ -274,7 +274,9 @@ static int decode_write_frame(AVCodecContext *avctx,
   }
   //test_ippiResize_8u_C1R_replacement(frame->data[0],frame->linesize[0],frame->height);
 
-  test_ippiRGBToYCbCr_8u_P3R_replacement();
+  double ncc_val[3]={0,0,0};
+  test_ippiRGBToYCbCr_8u_P3R_replacement(frame,ncc_val);
+  Output("%f %f %f\n",ncc_val[0],ncc_val[1],ncc_val[2]);
   return 0;
 }
 
@@ -360,7 +362,7 @@ static void video_decode_example(const char *filename)
 	    char buf[1024];
 	    /* the picture is allocated by the decoder, no need to free it */
 	    //in VS the file will be written to UnitTest1 directory
-	    snprintf(buf, sizeof(buf), "test%02d.pgm", frame_count);
+	    snprintf(buf, sizeof(buf), "Sampl%02d.pgm", frame_count);
 	    Output("writing frame %d to file '%s'\n", frame_count, buf);
 	    pgm_save(frame->data[0], frame->linesize[0], frame->width, frame->height, buf);
 	  }
