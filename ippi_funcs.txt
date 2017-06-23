@@ -1,4 +1,4 @@
-ippiAlphaCompC_8u_C1R - this is used foe watermark , it relates to questions in stakcoverflow that relates to adfding watermarks
+ippiAlphaCompC_8u_C1R - uses: ippAlphaPlus, ippAlphaOver - this is used for watermark , it relates to questions in stakcoverflow that relates to adfding watermarks 
 ippiAlphaCompC_8u_C1R
 ippiAlphaCompC_8u_C1R
 ippiAlphaCompC_8u_C1R
@@ -22,11 +22,11 @@ ippiCopy_8u_P3C3R
 ippiCopy_8u_P4C4R
 ippiCopy_8u_P4C4R
 ippiCopy_8u_P4C4R
+ippiMirror_8u_C1IR - ./ffmpeg_g -i psycho.mpg -vf "hflip" psycho-mirr.mpg // uses libavfilter/vf_hflip.c
 ippiMirror_8u_C1IR
 ippiMirror_8u_C1IR
 ippiMirror_8u_C1IR
 ippiMirror_8u_C1IR
-ippiMirror_8u_C1IR
 ippiMirror_8u_C1R
 ippiMirror_8u_C1R
 ippiMirror_8u_C1R
@@ -51,9 +51,18 @@ ippiResize_8u_C1R
 ippiResize_8u_C1R
 ippiResize_8u_C1R
 ippiResize_8u_C1R
+ippiRGBToYCbCr_8u_P3R //ffmpeg does not support planar RGB so need to flip the pointers
 ippiRGBToYCbCr_8u_P3R
-ippiRGBToYCbCr_8u_P3R
-ippiSet_8u_C1R
+ippiSet_8u_C1R - ./ffmpeg -y -i sample.mp4 -f lavfi -i color=c=green:s=30x40 -filter_complex " [0:v]overlay=x=0.20*main_w:y=0.10*main_h:eof_action=endall[out]; [0:a]anull[aud]" -map "[out]" -map "[aud]" -strict -2 outputfile2.mp4
+
+./ffmpeg -y -i psycho.mpg -f lavfi -i color=c=green:s=30x40 -filter_complex " [0:v]overlay=x=0.20*main_w:y=0.10*main_h:eof_action=endall[out]" -map "[out]"  -strict -2 psycho-sq.mpg
+
+
+vf_drawbox.c: filter_frame
+./ffmpeg -y -i sample.mp4 -vf "drawbox=x=10:y=10:w=100:h=100:color=pink@0.5:t=max"  outputfile.mp4
+
+ff_fill_rectangle
+
 ippiSet_8u_C1R
 ippiSet_8u_C1R
 ippiSet_8u_C1R

@@ -12,6 +12,17 @@
 #include <time.h>
 #include <math.h>
 
+extern "C"
+{
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavutil/imgutils.h>
+#include <libavutil/samplefmt.h>
+#include <libswscale/swscale.h>
+#include <libavutil/avstring.h>
+#include <libavutil/intreadwrite.h>
+}
+
 double rand_in_range_double(double min, double max) {
 	double X= ((double)rand())/((double)RAND_MAX);//X is in [0,1]
 	return (X*(max - min)) + min;
@@ -144,6 +155,10 @@ void fill_img(unsigned char* img[],int w,int h,int c,char with_rand){
 void planar_to_packed(unsigned char* src[] , unsigned char *dst ,int w,int h, int c){
 
   int j =0;
+  for(int ic=0;ic<c;ic++)
+    if(!src[ic]){
+      Output("planar_to_packed: %d plane is null\n",ic);
+    }
   for(int i=0;i<w*h;i++)
     for(int ic=0;ic<c;ic++)
       if(src[ic])
@@ -167,6 +182,77 @@ static void pgm_save(unsigned char *buf, int wrap, int xsize, int ysize,char *fi
 		int s = fwrite(buf + i * wrap, 1, xsize, f);
 	}
 	fclose(f);
+}
+
+int convert_to_format(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[], AVPixelFormat dst_format)
+{
+  SwsContext * ctx = sws_getContext(f_in->width, f_in->height,(AVPixelFormat)f_in->format,f_in->width, f_in->height ,dst_format, 0, NULL, NULL, NULL);
+  if (!ctx) {
+    Output("error: convert_to_format failed: ctx is null\n");
+    return -1;
+  }
+  int r = 0;
+  r = sws_scale(ctx, f_in->data,f_in->linesize, 0, f_in->height, dst, dst_stride);
+
+  if(r == 0){
+    Output("error: convert_to_format failed\n");
+    return -1;
+  }
+  return r;
+}
+
+
+void convert_to_GBRP(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[])
+{
+
+  int w = f_in->width;
+  int h = f_in->height;
+  
+  AVPixelFormat dst_format;
+
+  dst[0] = (unsigned char *)malloc(w*h);
+  dst[1] = (unsigned char *)malloc(w*h);
+  dst[2] = (unsigned char *)malloc(w*h);
+  dst[3] = NULL;
+  
+  if(!dst[0] || !dst[1] || !dst[2]){
+    Output("convert_to_GBRP: allocation failure\n");
+    return;
+  }
+  dst_stride[0] =  dst_stride[1] = dst_stride[2] = w;
+  dst_stride[3] = 0;
+  
+  convert_to_format(f_in, dst ,dst_stride, AV_PIX_FMT_GBRP);
+
+  //print_img("gbrp", dst,  w,  5,  3);
+
+
+  //print_img("rgb_p", &packed,  w*3,  5,  1);
+
+
+ }
+
+void convert_to_RGB24(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[])
+{
+
+  int w = f_in->width;
+  int h = f_in->height;
+  
+  AVPixelFormat dst_format;
+
+  dst[0] = (unsigned char *)malloc(w*h*3);
+  dst[1] = dst[2] = dst[3] = NULL;
+
+  if(!dst[0]){
+    Output("convert_to_RGB24: allocation failure\n");
+    return;
+  }
+  dst_stride[0] =  w*3;
+  dst_stride[1] = dst_stride[2] = dst_stride[3] = 0;
+  convert_to_format(f_in, dst ,dst_stride, AV_PIX_FMT_RGB24);
+
+  //print_img("rgb24", dst,  w*3,  5,  1);
+  
 }
 
 #endif

@@ -1,6 +1,4 @@
-//#ifdef WIN32
 #include "stdafx.h"
-//#endif
 #include "test_utils.h"
 extern "C"
 {
@@ -8,7 +6,7 @@ extern "C"
 #include "ippcc.h"
 #include "ippi.h"
 }
-//#include "media_io.h"
+
 #ifdef WIN32
 #include <windows.h>
 #include <random>
@@ -17,21 +15,6 @@ std::mt19937 gen;
 //#include <ctime>//this cause compilation errors
 #endif
 
-//#include <random>
-#include <stdlib.h>
-//#include <stdio.h>
-#include <time.h>
-#include <math.h>
-extern "C"
-{
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
-#include <libavutil/imgutils.h>
-#include <libavutil/samplefmt.h>
-#include <libswscale/swscale.h>
-#include <libavutil/avstring.h>
-#include <libavutil/intreadwrite.h>
-}
 
 void RGBtoYCbCr_ipp(unsigned char* src[3] , unsigned char *dst[] , int width,int height)
 {
@@ -355,13 +338,13 @@ void test_ippiResize_8u_C1R_replacement(unsigned char* src,int w,int h){
   /*                                     1              2            3                 4              5          6                7                   8              9            10   
 IppStatus ippiResize_8u_C1R(const Ipp8u* pSrc, IppiSize srcSize, int srcStep, IppiRect srcRoi, Ipp8u* pDst, int dstStep, IppiSize dstRoiSize, double xFactor, double yFactor, int interpolation);
   */
-  
+#ifdef WIN32
   ippiResize_8u_C1R( src,    srcSize,w,srcRect,
 	                 dst_ipp,dstSize.width,dstSize,
 	                 xfactor,yfactor,interpolation);
-					 
+    				 
  // print_img("dst_ipp",&dst_ipp, dstSize.width, dstSize.height, 1);
-  
+#endif  
   dst_ffmpeg = (uint8_t*)malloc(dstSize.height * dstSize.width+100);
   memset(dst_ffmpeg,0, dstSize.height * dstSize.width);
 
@@ -384,10 +367,12 @@ static int decode_write_frame(AVCodecContext *avctx,
                               AVFrame *frame, AVPacket *pkt, int last)
 {
     
-
+  int w = frame->width;
+  int h = frame->height;
+  
   for(int i=0;i<AV_NUM_DATA_POINTERS && frame->data[i];i++){
     Output("frame->data[%d] = %p\n",i,frame->data[i]);
-    Output("linesize[%d]=%u frame->width = %u, frame->height = %u\n",i,frame->linesize[i],frame->width, frame->height);
+    Output("linesize[%d]=%u frame->width = %u, frame->height = %u frame->format = %d\n",i,frame->linesize[i],frame->width, frame->height,frame->format);
     for(int j=0;j<10;j++){
       Output("%u ",frame->data[i][j]);
     }
@@ -395,13 +380,8 @@ static int decode_write_frame(AVCodecContext *avctx,
 	if (i == 0)
 		break;
   }
-  test_ippiResize_8u_C1R_replacement(frame->data[0],frame->linesize[0],frame->height);
-  
-
+  //test_ippiResize_8u_C1R_replacement(frame->data[0],frame->linesize[0],frame->height);
  
-        
-  
-  
   return 0;
 }
 
@@ -460,52 +440,52 @@ static void video_decode_example(const char *filename)
         fprintf(stderr, "Could not allocate video frame\n");
         exit(1);
     }
-
+    
     frame_count = 0;
     int max_frame = 1;
-	for (;;) {
-		avpkt.size = fread(inbuf, 1, INBUF_SIZE, f);
-		if (avpkt.size == 0)
-			break;
-		avpkt.data = inbuf;
-		while (avpkt.size > 0) {
-
-			int len, got_frame;
-			len = avcodec_decode_video2(c, frame, &got_frame, &avpkt);
-			if (len < 0) {
-				fprintf(stderr, "Error while decoding frame %d\n", frame_count);
-				return;// len;
-			}
-			if (got_frame) {
-
-				if (frame_count % 100 == 0) {
-					Output("frame %d:\n", frame_count);
-					if (decode_write_frame(c, frame, &avpkt, 0) < 0) {
-						Output("decode_write_frame failed\n");
-						exit(1);
-					}
-					char buf[1024];
-					/* the picture is allocated by the decoder, no need to free it */
-					//in VS the file will be written to UnitTest1 directory
-					snprintf(buf, sizeof(buf), "test%02d.pgm", frame_count);
-					Output("writing frame %d to file '%s'\n", frame_count, buf);
-					pgm_save(frame->data[0], frame->linesize[0], frame->width, frame->height, buf);
-				}
-
-				
-
-				frame_count++;
-				//if(frame_count>max_frame)
-				//  return;
-			}
-			if (avpkt.data) {
-				avpkt.size -= len;
-				avpkt.data += len;
-			}
-
-
-		}
+    for (;;) {
+      avpkt.size = fread(inbuf, 1, INBUF_SIZE, f);
+      if (avpkt.size == 0)
+	break;
+      avpkt.data = inbuf;
+      while (avpkt.size > 0) {
+	
+	int len, got_frame;
+	len = avcodec_decode_video2(c, frame, &got_frame, &avpkt);
+	if (len < 0) {
+	  fprintf(stderr, "Error while decoding frame %d\n", frame_count);
+	  return;// len;
 	}
+	if (got_frame) {
+	  
+	  if (frame_count % 100 == 0) {
+	    Output("frame %d:\n", frame_count);
+	    if (decode_write_frame(c, frame, &avpkt, 0) < 0) {
+	      Output("decode_write_frame failed\n");
+	      exit(1);
+	    }
+	    char buf[1024];
+	    /* the picture is allocated by the decoder, no need to free it */
+	    //in VS the file will be written to UnitTest1 directory
+	    snprintf(buf, sizeof(buf), "test%02d.pgm", frame_count);
+	    Output("writing frame %d to file '%s'\n", frame_count, buf);
+	    pgm_save(frame->data[0], frame->linesize[0], frame->width, frame->height, buf);
+	  }
+	  
+	  
+	  
+	  frame_count++;
+	  //if(frame_count>max_frame)
+	  //  return;
+			}
+	if (avpkt.data) {
+	  avpkt.size -= len;
+	  avpkt.data += len;
+	}
+	
+	
+      }
+    }
     
     /* some codecs, such as MPEG, transmit the I and P frame with a
        latency of one frame. You must do the following to have a
@@ -535,6 +515,7 @@ int main(int argc, char **argv)
 #endif
 
 	avcodec_register_all();
+	av_register_all();
     if (argc < 2) {
       Output("usage: %s filename\n",argv[0]);
       return 1;
