@@ -1,12 +1,11 @@
 #include "stdafx.h"
-#include "test_utils.h"
 extern "C"
 {
 #include <ipp.h>
 #include "ippcc.h"
 #include "ippi.h"
 }
-
+//#include "media_io.h"
 #ifdef WIN32
 #include <windows.h>
 #include <random>
@@ -15,70 +14,15 @@ std::mt19937 gen;
 //#include <ctime>//this cause compilation errors
 #endif
 
+//#include <random>
+#include <stdlib.h>
+//#include <stdio.h>
+#include <time.h>
+#include <math.h>
+
+#include "test_utils.h"
+#include "Copy_8u_C1R_test.h"
 #include "RGBToYCbCr_8u_P3R_test.h"
-
-
-//ippiCopy_8u_C1R( src,w,dst_ipp,w,roi);
-void ippiCopy_8u_C1R_ffmpeg(unsigned char* src , int ws, unsigned char *dst ,int wd, IppiSize roi){
-  /*
-void av_image_copy_plane 	( 	uint8_t *  	dst,
-		int  	dst_linesize,
-		const uint8_t *  	src,
-		int  	src_linesize,
-		int  	bytewidth,
-		int  	height 
-	) 		
-  */
-  
-  av_image_copy_plane(dst,wd,src,ws,roi.width,roi.height); 
-	
-}
-  
-void test_ippiCopy_8u_C1R_replacement(){
-
-  IppiSize roi;
-
-  int w = rand_in_range(20,40);
-  int h = rand_in_range(20,40);
-  int offset = rand_in_range(0,w*h-1);
-  int wr = rand_in_range(1,w - (offset % w));
-  int hr = rand_in_range(1, h- (offset/w));
-
-    
-  unsigned char* src;
-  unsigned char *dst_ipp,*dst_ffmpeg;
-
-  src = (uint8_t*)malloc(h*w);
-    
-  fill_img(&src, w, h, 1,1);
-  //print_img("src",&src, w, h, 1);
-  
-  dst_ipp = (uint8_t*)malloc(h*w);
-  memset(dst_ipp,0,h*w);
-
-  dst_ffmpeg = (uint8_t*)malloc(h*w);
-  memset(dst_ffmpeg,0,h*w);
-
-  roi.height    = hr;
-  roi.width     = wr;
-  
-  
-  ippiCopy_8u_C1R( src+offset,w,dst_ipp,w,roi);
-  //print_img("dst_ipp",&dst_ipp, w, h, 1);
-
-  ippiCopy_8u_C1R_ffmpeg(src+offset ,w,dst_ffmpeg ,w,roi);
-  //print_img("dst_ffmpeg",&dst_ffmpeg, w, h, 1);
-
-  double d[1] = {0};
-  l2_dist_img(d,&dst_ipp,&dst_ffmpeg,w,h,1);
-  double  n = ncc(dst_ipp,dst_ffmpeg,w*h);
-
-  //Output("distances are %f  img = (%d X %d) offset=%d , roi=%d X %d )\n",d[0],w,h,offset,wr,hr);
-  Output("ncc is %f  img = (%d X %d) offset=%d , roi=%d X %d )\n",n,w,h,offset,wr,hr);
-  
-    return;
-}
-
 /*
 Parameters
 
@@ -261,22 +205,31 @@ static int decode_write_frame(AVCodecContext *avctx,
     
   int w = frame->width;
   int h = frame->height;
-  
+
+  Output("frame->data = %p\n",frame->data);
   for(int i=0;i<AV_NUM_DATA_POINTERS && frame->data[i];i++){
     Output("frame->data[%d] = %p\n",i,frame->data[i]);
     Output("linesize[%d]=%u frame->width = %u, frame->height = %u frame->format = %d\n",i,frame->linesize[i],frame->width, frame->height,frame->format);
     for(int j=0;j<10;j++){
       Output("%u ",frame->data[i][j]);
     }
-    Output("\n\n");
+    Output("\n");
 	if (i == 0)
 		break;
   }
+  
   //test_ippiResize_8u_C1R_replacement(frame->data[0],frame->linesize[0],frame->height);
 
   double ncc_val[3]={0,0,0};
+
+  //test_ippiRGBToYCbCr_8u_P3R_replacement(AVFrame *frame, double ncc_plain_val[3]);
+  
   test_ippiRGBToYCbCr_8u_P3R_replacement(frame,ncc_val);
   Output("%f %f %f\n",ncc_val[0],ncc_val[1],ncc_val[2]);
+
+  ncc_val[0] = 0;
+  test_ippiCopy_8u_C1R_replacement(frame,ncc_val);
+  Output("%f\n",ncc_val[0]);
   return 0;
 }
 
@@ -353,8 +306,8 @@ static void video_decode_example(const char *filename)
 	}
 	if (got_frame) {
 	  
-	  if (frame_count % 100 == 0) {
-	    Output("frame %d:\n", frame_count);
+	  if (frame_count % 50 == 0) {
+	    Output("\nframe %d:\n", frame_count);
 	    if (decode_write_frame(c, frame, &avpkt, 0) < 0) {
 	      Output("decode_write_frame failed\n");
 	      exit(1);
@@ -363,7 +316,7 @@ static void video_decode_example(const char *filename)
 	    /* the picture is allocated by the decoder, no need to free it */
 	    //in VS the file will be written to UnitTest1 directory
 	    snprintf(buf, sizeof(buf), "Sampl%02d.pgm", frame_count);
-	    Output("writing frame %d to file '%s'\n", frame_count, buf);
+	    //Output("writing frame %d to file '%s'\n", frame_count, buf);
 	    pgm_save(frame->data[0], frame->linesize[0], frame->width, frame->height, buf);
 	  }
 	  
@@ -387,7 +340,7 @@ static void video_decode_example(const char *filename)
        chance to get the last frame of the video */
     avpkt.data = NULL;
     avpkt.size = 0;
-    decode_write_frame(c, frame, &avpkt, 1);
+    //decode_write_frame(c, frame, &avpkt, 1);
 
     fclose(f);
 
@@ -408,7 +361,7 @@ int main(int argc, char **argv)
 #else
 	srand(time(NULL));
 #endif
-
+	av_log_set_level(8);
 	avcodec_register_all();
 	av_register_all();
     if (argc < 2) {

@@ -60,6 +60,8 @@ int test_ippiRGBToYCbCr_8u_P3R_replacement(AVFrame *frame, double ncc_plain_val[
   unsigned char *gbrp[4] ={NULL,NULL,NULL,NULL};
   int gbrp_stride[4];
 
+  //int r;
+  //Output(" w=%d h=%d f->format=%d f->data=%p f->linesize=%p\n",frame->width,frame->height,frame->format,frame->data,frame->linesize);
   int r = convert_to_GBRP(frame,gbrp ,gbrp_stride);
 
   if(r<0){
@@ -67,7 +69,6 @@ int test_ippiRGBToYCbCr_8u_P3R_replacement(AVFrame *frame, double ncc_plain_val[
     return -1;
   }
 
-    
   const unsigned char *rgb_planar[4] =  {gbrp[2],gbrp[0],gbrp[1],NULL};
   int rgb_planar_stride[4] = {gbrp_stride[2],gbrp_stride[0],gbrp_stride[1],0};
 
@@ -148,49 +149,4 @@ int test_ippiRGBToYCbCr_8u_P3R_replacement(AVFrame *frame, double ncc_plain_val[
       free(gbrp[i]);
   }
   return r;
-    
-  /*
-  int w = rand() % 100;
-  int h = rand() % 100;
-  unsigned char *src[3];
-  unsigned char *dst_ipp[3];
-
-  src[0] = (uint8_t*)malloc(h*w);
-  src[1] = (uint8_t*)malloc(h*w);
-  src[2] = (uint8_t*)malloc(h*w);
-  
-  fill_img(src, w, h, 3,1);
-  //print_img("src",src, w, h, 3);
-  
-  dst_ipp[0] = (uint8_t*)malloc(h*w);
-  dst_ipp[1] = (uint8_t*)malloc(h*w);
-  dst_ipp[2] = (uint8_t*)malloc(h*w);
-
-  memset(dst_ipp[0],0,h*w);
-  memset(dst_ipp[1],0,h*w);
-  memset(dst_ipp[2],0,h*w);
-
-  ////////////////////////
-  RGBtoYCbCr_ipp(src,dst_ipp,w,h);
-  ///////////////////////
-  
-  //print_img("dst_ipp",dst_ipp, w, h, 1);
-  
-  uint8_t* dst_ffmpeg[3];// = (uint8_t* const)malloc(3 * imgHeight*imgWidth);
-  dst_ffmpeg[0] = (uint8_t* const)malloc(h*w);
-  dst_ffmpeg[1] = (uint8_t* const)malloc(h*w);
-  dst_ffmpeg[2] = (uint8_t* const)malloc(h*w);
-
-  memset(dst_ffmpeg[0],0,h*w);
-  memset(dst_ffmpeg[1],0,h*w);
-  memset(dst_ffmpeg[2],0,h*w);
-
-  RGBtoYCbCr_ffmpeg(src, dst_ffmpeg , w,  h);
-  //print_img("dst_ffmpeg",dst_ffmpeg, w, h, 3);
-
-  double d[3] = {0,0,0};
-  l2_dist_img(d,dst_ipp,dst_ffmpeg,w,h,3);
-  Output("distances are %f %f % for %d X %d\n",d[0],d[1],d[2],w,h);
-  */
-  return 0;
 }

@@ -100,6 +100,54 @@ void l2_dist_img(double distances[], unsigned char* img1[],unsigned char* img2[]
   return;
 }
 
+double ncc2(const unsigned char* im1 ,int im1_linesz, const unsigned char* im2,int im2_linesz, int w,int h){
+
+  int sz = h*w; 
+  double* t1 = (double*)malloc(sizeof(double)*sz);
+  double* t2 = (double*)malloc(sizeof(double)*sz);
+  double mean1 = 0;
+  double mean2 = 0;
+  int i=0;
+  for(int ih=0;ih<h;ih++){
+    for(int iw=0;iw<w;iw++){
+      //double X=(((double)rand()/(double)RAND_MAX)/100)-0.005;
+      t1[i] = im1[ih*im1_linesz+iw]*1.0;//+X;
+      mean1 += t1[i];
+      t2[i] = im2[ih*im2_linesz+iw]*1.0;
+      mean2 += t2[i];
+      i++;
+    }
+    //Output("mean1  = %f, mean2 = %f\n",mean1,mean2);
+  }
+  mean1 = mean1 / (1.0*sz);
+  mean2 = mean2 / (1.0*sz);
+
+  //Output("mean1  = %f, mean2 = %f\n",mean1,mean2);
+  //Output("ncc: sz = %d\n",sz);
+
+  double norm1 = 0;
+  double norm2 = 0;
+  double n = 0;
+  for(int i=0;i<sz;i++){
+    t1[i] -= mean1;
+    norm1 += t1[i]*t1[i];
+    t2[i] -= mean2;
+    norm2 += t2[i]*t2[i];
+    n += t1[i]*t2[i];
+    //Output("n  = %f, norm1 = %f norm2 = %f\n",n,norm1,norm2);
+  }
+  //Output("n  = %f, norm1 = %f norm2 = %f\n",n,norm1,norm2);
+
+  if(norm1<0.01 || norm2<0.01){
+    Output("nnc: WARNING: norms might be too small: norm1=%f norm2=%f\n",norm1,norm2);
+  }
+  
+  free(t1);
+  free(t2);
+  return n/(sqrt(norm1*norm2));
+
+}
+
 double ncc(const unsigned char* im1 , const unsigned char* im2,int sz){
 
   double* t1 = (double*)malloc(sizeof(double)*sz);
@@ -192,13 +240,16 @@ void pgm_save(unsigned char *buf, int wrap, int xsize, int ysize,char *filename)
 
 int convert_to_format(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[], AVPixelFormat dst_format)
 {
+  //Output("error: convert_to_format failed: w=%d h=%d f->format=%d f->data=%p f->linesize=%p\n",f_in->width,f_in->height,f_in->format,f_in->data,f_in->linesize);
+  
   SwsContext * ctx = sws_getContext(f_in->width, f_in->height,(AVPixelFormat)f_in->format,f_in->width, f_in->height ,dst_format, 0, NULL, NULL, NULL);
   if (!ctx) {
     Output("error: convert_to_format failed: ctx is null\n");
     return -1;
   }
-  int r = 0;
-  r = sws_scale(ctx, f_in->data,f_in->linesize, 0, f_in->height, dst, dst_stride);
+  
+  //Output("error: convert_to_format failed: w=%d h=%d f->format=%d f->data=%p f->linesize=%p\n",f_in->width,f_in->height,f_in->format,f_in->data,f_in->linesize);
+  int r = sws_scale(ctx, f_in->data,f_in->linesize, 0, f_in->height, dst, dst_stride);
 
   if(r == 0){
     Output("error: convert_to_format failed\n");
@@ -216,9 +267,9 @@ int convert_to_GBRP(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[])
   
   AVPixelFormat dst_format;
 
-  dst[0] = (unsigned char *)malloc(w*h);
-  dst[1] = (unsigned char *)malloc(w*h);
-  dst[2] = (unsigned char *)malloc(w*h);
+  dst[0] = (unsigned char *)malloc(w*h+1000);
+  dst[1] = (unsigned char *)malloc(w*h+1000);
+  dst[2] = (unsigned char *)malloc(w*h+1000);
   dst[3] = NULL;
   
   if(!dst[0] || !dst[1] || !dst[2]){
@@ -250,6 +301,29 @@ int convert_to_RGB24(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[])
   dst_stride[0] =  w*3;
   dst_stride[1] = dst_stride[2] = dst_stride[3] = 0;
   return convert_to_format(f_in, dst ,dst_stride, AV_PIX_FMT_RGB24);
+
+  //print_img("rgb24", dst,  w*3,  5,  1);
+  
+}
+
+int convert_to_GRAY8(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[],int extra_width)
+{
+
+  int w = f_in->width;
+  int h = f_in->height;
+  
+  AVPixelFormat dst_format;
+
+  dst[0] = (unsigned char *)malloc((w+extra_width)*h);
+  dst[1] = dst[2] = dst[3] = NULL;
+
+  if(!dst[0]){
+    Output("convert_to_GRAY8: allocation failure\n");
+    return -1;
+  }
+  dst_stride[0] =  w+extra_width;
+  dst_stride[1] = dst_stride[2] = dst_stride[3] = 0;
+  return convert_to_format(f_in, dst ,dst_stride, AV_PIX_FMT_GRAY8);
 
   //print_img("rgb24", dst,  w*3,  5,  1);
   
