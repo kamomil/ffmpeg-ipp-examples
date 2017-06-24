@@ -23,6 +23,7 @@ std::mt19937 gen;
 #include "test_utils.h"
 #include "Copy_8u_C1R_test.h"
 #include "Mirror_8u_C1R_test.h"
+#include "Mirror_8u_C1IR_test.h"
 
 #include "Copy_8u_C3P3R_test.h"
 #include "RGBToYCbCr_8u_P3R_test.h"
@@ -236,9 +237,14 @@ static int decode_write_frame(AVCodecContext *avctx,
   Output("ippiCopy_8u_C1R compare:\n");
   Output("%f\n\n",ncc_val[0]);
 
+  ///ncc_val[0] = 0;
+  ///test_ippiMirror_8u_C1R_replacement(frame,ncc_val);
+  ///Output("ippiMirror_8u_C1R compare:\n");
+  ///Output("%f\n\n",ncc_val[0]);
+
   ncc_val[0] = 0;
-  test_ippiMirror_8u_C1R_replacement(frame,ncc_val);
-  Output("ippiMirror_8u_C1R compare:\n");
+  test_ippiMirror_8u_C1IR_replacement(frame,ncc_val);
+  Output("ippiMirror_8u_C1IR compare:\n");
   Output("%f\n\n",ncc_val[0]);
 
   
