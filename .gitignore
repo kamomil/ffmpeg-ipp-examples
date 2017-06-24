@@ -1,1 +1,7 @@
 *.pgm
+*~
+*.o
+GATGS
+GPATH
+GRTAGS
+GSYMS
