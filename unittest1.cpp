@@ -22,6 +22,8 @@ std::mt19937 gen;
 
 #include "test_utils.h"
 #include "Copy_8u_C1R_test.h"
+#include "Mirror_8u_C1R_test.h"
+
 #include "Copy_8u_C3P3R_test.h"
 #include "RGBToYCbCr_8u_P3R_test.h"
 /*
@@ -226,15 +228,24 @@ static int decode_write_frame(AVCodecContext *avctx,
   //test_ippiRGBToYCbCr_8u_P3R_replacement(AVFrame *frame, double ncc_plain_val[3]);
   
   test_ippiRGBToYCbCr_8u_P3R_replacement(frame,ncc_val);
-  Output("%f %f %f\n",ncc_val[0],ncc_val[1],ncc_val[2]);
+  Output("ippiRGBToYCbCr_8u_P3R compare:\n");
+  Output("%f %f %f\n\n",ncc_val[0],ncc_val[1],ncc_val[2]);
 
   ncc_val[0] = 0;
   test_ippiCopy_8u_C1R_replacement(frame,ncc_val);
-  Output("%f\n",ncc_val[0]);
+  Output("ippiCopy_8u_C1R compare:\n");
+  Output("%f\n\n",ncc_val[0]);
 
+  ncc_val[0] = 0;
+  test_ippiMirror_8u_C1R_replacement(frame,ncc_val);
+  Output("ippiMirror_8u_C1R compare:\n");
+  Output("%f\n\n",ncc_val[0]);
+
+  
   ncc_val[0] = ncc_val[1] = ncc_val[0] = 2;
   test_ippiCopy_8u_C3P3R_replacement(frame,ncc_val);
-  Output("%f %f %f\n",ncc_val[0],ncc_val[1],ncc_val[2]);
+  Output("ippiCopy_8u_C3P3R compare:\n");
+  Output("%f %f %f\n\n",ncc_val[0],ncc_val[1],ncc_val[2]);
 
   return 0;
 }

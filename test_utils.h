@@ -44,6 +44,8 @@ int rand_in_range(int min,int max);
 
 void print_img(char* name, unsigned char* img[], int w, int h, int c);
 
+void print_img2(char* name, unsigned char* img[], int stride, int w, int h, int c);
+
 void l2_dist_img(double distances[], unsigned char* img1[],unsigned char* img2[], int w, int h, int c);
 
 double ncc2(const unsigned char* im1 ,int im1_linesz, const unsigned char* im2,int im2_linesz, int w,int h);

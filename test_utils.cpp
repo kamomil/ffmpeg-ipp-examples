@@ -70,6 +70,27 @@ void print_img(char* name, unsigned char* img[], int w, int h, int c) {
   return;
 }
 
+void print_img2(char* name, unsigned char* img[], int stride,int w, int h, int c) {
+
+  Output("Printing img '%s' (%p):\n",name, img);
+  for (int ci = 0; ci<c; ci++) {
+    if (!img[ci]) {
+      Output("Channel %d is NULL\n", ci);
+    }
+    else {
+      Output("Channel %d:\n", ci);
+      for (int hi = 0; hi < h; hi++) {
+	for (int wi = 0; wi < w; wi++) {
+	  unsigned char p = img[ci][wi + hi*stride];
+	    Output("%u%s", p, p > 99 ? " " : (p > 10 ? "  " : "   "));
+	}
+	Output("\n");
+      }
+    }
+  }
+  return;
+}
+
 void l2_dist_img(double distances[], unsigned char* img1[],unsigned char* img2[], int w, int h, int c) {
 
   for (int ci = 0; ci<c; ci++) {
@@ -241,7 +262,6 @@ void pgm_save(unsigned char *buf, int wrap, int xsize, int ysize,char *filename)
 int convert_to_format(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[], AVPixelFormat dst_format)
 {
   //Output("error: convert_to_format failed: w=%d h=%d f->format=%d f->data=%p f->linesize=%p\n",f_in->width,f_in->height,f_in->format,f_in->data,f_in->linesize);
-  
   SwsContext * ctx = sws_getContext(f_in->width, f_in->height,(AVPixelFormat)f_in->format,f_in->width, f_in->height ,dst_format, 0, NULL, NULL, NULL);
   if (!ctx) {
     Output("error: convert_to_format failed: ctx is null\n");

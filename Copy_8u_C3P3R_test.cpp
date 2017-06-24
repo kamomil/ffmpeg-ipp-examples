@@ -24,8 +24,8 @@ std::mt19937 gen;
 #include "Copy_8u_C3P3R_test.h"
 
 
-
-int ippiCopy_8u_C3P3R_daf(const Ipp8u* pSrc, int srcStep, Ipp8u* const pDst[3], int dstStep, IppiSize roiSize){
+//this version is wrong , it has a bug in case of a negative steps
+int ippiCopy_8u_C3P3R_daf_buggy(const Ipp8u* pSrc, int srcStep, Ipp8u* const pDst[3], int dstStep, IppiSize roiSize){
 
   const unsigned char* sptr = pSrc;
   unsigned char* dptr0 = pDst[0];
@@ -45,6 +45,43 @@ int ippiCopy_8u_C3P3R_daf(const Ipp8u* pSrc, int srcStep, Ipp8u* const pDst[3], 
     dptr0 += dst_extra;
     dptr1 += dst_extra;
     dptr2 += dst_extra;
+    
+  }
+  return 0;  
+}
+
+int ippiCopy_8u_C3P3R_daf(const Ipp8u* pSrc, int srcStep, Ipp8u* const pDst[3], int dstStep, IppiSize roiSize){
+
+  const unsigned char* start_of_srow_ptr = pSrc;
+  const unsigned char* sptr = pSrc;
+  
+  unsigned char* start_of_drow_ptr0 = pDst[0];
+  unsigned char* start_of_drow_ptr1 = pDst[1];
+  unsigned char* start_of_drow_ptr2 = pDst[2];
+  
+  unsigned char* dptr0 = pDst[0];
+  unsigned char* dptr1 = pDst[1];
+  unsigned char* dptr2 = pDst[2];
+   
+  for(;roiSize.height;roiSize.height--){
+    const unsigned char* row_end = start_of_srow_ptr+(3*roiSize.width);
+    while(sptr<row_end){
+      *(dptr0++) = *(sptr++);
+      *(dptr1++) = *(sptr++);
+      *(dptr2++) = *(sptr++);
+    }
+
+    start_of_srow_ptr +=srcStep;
+
+    start_of_drow_ptr0 += dstStep;
+    start_of_drow_ptr1 += dstStep;
+    start_of_drow_ptr2 += dstStep;
+
+    
+    sptr  = start_of_srow_ptr;
+    dptr0 = start_of_drow_ptr0;
+    dptr1 = start_of_drow_ptr1;
+    dptr2 = start_of_drow_ptr2;
     
   }
   return 0;  
@@ -83,20 +120,23 @@ int test_ippiCopy_8u_C3P3R_replacement(AVFrame *frame, double ncc_plain_val[3]){
     return -1;
   }
 
-  unsigned char *dst_ipp[3];
+  unsigned char *dst_ipp[3]={NULL,NULL,NULL};
   dst_ipp[0] = (unsigned char*)malloc(h*dstStep);
   dst_ipp[1] = (unsigned char*)malloc(h*dstStep);
   dst_ipp[2] = (unsigned char*)malloc(h*dstStep);
-  unsigned char *dst_daf[3];
+
+  unsigned char *dst_daf[3]={NULL,NULL,NULL};
   dst_daf[0] = (unsigned char*)malloc(h*dstStep);
   dst_daf[1] = (unsigned char*)malloc(h*dstStep);
   dst_daf[2] = (unsigned char*)malloc(h*dstStep);
 
+  unsigned char* src = NULL;
+  unsigned char* src_end = NULL;
+
   if(!dst_ipp[0] || !dst_ipp[1] || !dst_ipp[2] || !dst_daf[0] || !dst_daf[1] || !dst_daf[2]){
     Output("error: test_ippiCopy_8u_C1R_replacement: allocation failed\n");
-    if(pSrc[0])
-      free(pSrc[0]);
-    return -1;
+    r = -1;
+    goto end;
   }
   
   memset(dst_ipp[0],0,h*dstStep);
@@ -111,12 +151,50 @@ int test_ippiCopy_8u_C3P3R_replacement(AVFrame *frame, double ncc_plain_val[3]){
 
   //ippiCopy_<mod>(const Ipp<datatype>* pSrc, int srcStep, Ipp<datatype>* const pDst[3], int dstStep, IppiSize roiSize);
     
-  ippiCopy_8u_C3P3R    (pSrc[0]+(offset_h*srcStep)+3*offset_w,srcStep,dst_ipp,dstStep,roi);
-  ippiCopy_8u_C3P3R_daf(pSrc[0]+(offset_h*srcStep)+3*offset_w,srcStep,dst_daf,dstStep,roi);
+  //ippiCopy_8u_C3P3R    (pSrc[0]+(offset_h*srcStep)+3*offset_w,srcStep,dst_ipp,dstStep,roi);
+  //ippiCopy_8u_C3P3R_daf(pSrc[0]+(offset_h*srcStep)+3*offset_w,srcStep,dst_daf,dstStep,roi);
+
+  src = pSrc[0]+(offset_h*srcStep)+3*offset_w;
+  src_end = src+srcStep*(roi.height-1);
+  
+  r = ippiCopy_8u_C3P3R(src_end,0-srcStep,dst_ipp,dstStep,roi);
+  if(r != ippStsNoErr){
+    Output("error:  ippiCopy_8u_C3P3R failed with val %d\n",r);
+    r = -1;
+    goto end;
+  }
+  r = ippiCopy_8u_C3P3R_daf(src_end,0-srcStep,dst_daf,dstStep,roi);
+
+  if(r < 0){
+    Output("error:  ippiCopy_8u_C3P3R_daf failed with val\n");
+    r = -1;
+    goto end;
+  }
+
+
   //print_img("copy_ipp",dst_ipp,10,10,1);
   //
   //print_img("copy_daf",dst_daf,10,10,1);
   ncc_plain_val[0] = ncc2(dst_ipp[0],dstStep,dst_daf[0],dstStep,w,h);
   ncc_plain_val[1] = ncc2(dst_ipp[1],dstStep,dst_daf[1],dstStep,w,h);
   ncc_plain_val[2] = ncc2(dst_ipp[2],dstStep,dst_daf[2],dstStep,w,h);
+
+ end:
+  if(pSrc[0])
+    free(pSrc[0]);
+  
+  if(dst_ipp[0])
+    free(dst_ipp[0]);   
+  if(dst_ipp[1])
+    free(dst_ipp[1]);
+  if(dst_ipp[2])
+    free(dst_ipp[2]);
+  
+  if(dst_daf[0])
+    free(dst_daf[0]);
+  if(dst_daf[1])
+    free(dst_daf[1]);
+  if(dst_daf[2])
+    free(dst_daf[2]);
+  return r;
 }
