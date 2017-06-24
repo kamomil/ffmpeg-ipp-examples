@@ -126,6 +126,8 @@ int test_ippiRGBToYCbCr_8u_P3R_replacement(AVFrame *frame, double ncc_plain_val[
 
   r = ippiRGBToYCbCr_8u_P3R_ffmpeg(rgb_planar, rgb_planar_stride[0], pDst_ffmpeg, w , roiSize);
 
+  //print_img("copy_ffmpeg",pDst_ffmpeg,10,10,3);
+  //print_img("copy_ipp",pDst_ipp,10,10,3);
   if(r<0){
     Output("test_ippiRGBToYCbCr_8u_P3R_replacement: ippiRGBToYCbCr_8u_P3R_ffmpeg failure\n");
     for(int i=0;i<3;i++){

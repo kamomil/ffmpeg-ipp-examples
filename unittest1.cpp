@@ -22,6 +22,7 @@ std::mt19937 gen;
 
 #include "test_utils.h"
 #include "Copy_8u_C1R_test.h"
+#include "Copy_8u_C3P3R_test.h"
 #include "RGBToYCbCr_8u_P3R_test.h"
 /*
 Parameters
@@ -230,6 +231,11 @@ static int decode_write_frame(AVCodecContext *avctx,
   ncc_val[0] = 0;
   test_ippiCopy_8u_C1R_replacement(frame,ncc_val);
   Output("%f\n",ncc_val[0]);
+
+  ncc_val[0] = ncc_val[1] = ncc_val[0] = 2;
+  test_ippiCopy_8u_C3P3R_replacement(frame,ncc_val);
+  Output("%f %f %f\n",ncc_val[0],ncc_val[1],ncc_val[2]);
+
   return 0;
 }
 

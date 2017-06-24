@@ -38,11 +38,11 @@ int test_ippiCopy_8u_C1R_replacement(AVFrame* frame, double* ncc_val){
   int extra_add_to_dst_width = rand_in_range(1,100);
   int extra_add_to_src_width = rand_in_range(1,100);
 
-  int offset_w = 0;//rand_in_range(0,w-1);
-  int offset_h = 0;//rand_in_range(0,h-1);
+  int offset_w = rand_in_range(0,w-1);
+  int offset_h = rand_in_range(0,h-1);
   
-  int wr = w;//rand_in_range(1,w - offset_w);
-  int hr = h;//rand_in_range(1,h - offset_h);
+  int wr = rand_in_range(1,w - offset_w);
+  int hr = rand_in_range(1,h - offset_h);
 
   unsigned char* pSrc[4]={NULL,NULL,NULL,NULL};
   int src_stride[4]={0,0,0,0};
@@ -79,7 +79,9 @@ int test_ippiCopy_8u_C1R_replacement(AVFrame* frame, double* ncc_val){
   //ippiCopy_<mod>(const Ipp<datatype>* pSrc, int srcStep, Ipp<datatype>* pDst, int dstStep, IppiSize roiSize);
   ippiCopy_8u_C1R( pSrc[0]+(offset_h*srcStep)+offset_w,srcStep,dst_ipp,dstStep,roi);
 
-  ippiCopy_8u_C1R_ffmpeg(pSrc[0]+(offset_h*srcStep)+offset_w,srcStep,dst_ffmpeg,dstStep,roi);  
+  //print_img("copy_ipp",&dst_ipp,10,10,1);
+  ippiCopy_8u_C1R_ffmpeg(pSrc[0]+(offset_h*srcStep)+offset_w,srcStep,dst_ffmpeg,dstStep,roi);
+  //print_img("copy_ffmpeg",&dst_ffmpeg,10,10,1);
   *ncc_val = ncc2(dst_ipp,dstStep,dst_ffmpeg,dstStep,w,h);
 
   return 0;
