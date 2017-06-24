@@ -1,7 +1,8 @@
 *.pgm
 *~
 *.o
-GATGS
+GTAGS
 GPATH
 GRTAGS
 GSYMS
+*.mpg
