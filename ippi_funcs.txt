@@ -1,5 +1,5 @@
 ippiAlphaCompC_8u_C1R - uses: ippAlphaPlus, ippAlphaOver - this is used for watermark , it relates to questions in stakcoverflow that relates to adfding watermarks 
-ippiAlphaCompC_8u_C1R
+ippiAlphaCompC_8u_C1R - blend_plane in vf_overlay.c
 ippiAlphaCompC_8u_C1R
 ippiAlphaCompC_8u_C1R
 ippiAlphaCompC_8u_C1R
