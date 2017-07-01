@@ -24,13 +24,12 @@ std::mt19937 gen;
 
 //ippiSet_<mod>(Ipp<datatype> value, Ipp<datatype>* pDst, int dstStep, IppiSize roiSize);
 
-int ippiSet_8u_C1R_daf(Ippu8 value, Ipp8u* pDst, int dstStep, IppiSize roiSize){
+int ippiSet_8u_C1R_daf(Ipp8u value, Ipp8u* pDst, int dstStep, IppiSize roiSize){
 
   for(;roiSize.height;roiSize.height--){
 
     memset(pDst,value,roiSize.width);
     pDst += dstStep;
-    dst_ptr -= dstStep;
   }
   return 0;
 }
@@ -57,70 +56,73 @@ int test_ippiSet_8u_C1R_replacement(AVFrame *frame, double* ncc_val){
 
   int srcStep = w+extra_add_to_src_width;
   int dstStep = w+extra_add_to_dst_width;
-  
+
+  roi.width = wr;
+  roi.height = hr;
 
   //this allocates pSrc
   int r = convert_to_GRAY8(frame, pSrc , src_stride,extra_add_to_src_width);
 
-  unsigned char *dst_ipp =    (unsigned char*)malloc(h*dstStep);
-  unsigned char *dst_ffmpeg = (unsigned char*)malloc(h*dstStep);
-
   IppStatus st = ippStsNoErr;
 
-  unsigned char* src_offst = pSrc[0]+(offset_h*srcStep) + offset_w;
+  unsigned char* src_offst_pp = pSrc[0]+(offset_h*srcStep) + offset_w;
+
+  unsigned char* src_ffmpeg = (unsigned char*)malloc(src_stride[0]*h);
+
+  unsigned char* src_offst_ff;
     
   if(r<0){
-    Output("error: test_ippiCopy_8u_C1R_replacement: convert_to_GRAY8 failed\n");
+    Output("error: test_ippiSet_8u_C1R_replacement: convert_to_GRAY8 failed\n");
     goto end;
   }
-
   
-  if(!dst_ipp || !dst_ffmpeg){
-    Output("error: test_ippiCopy_8u_C1R_replacement: allocation failed\n");
+  if(!src_ffmpeg){
+    Output("error: test_ippiSet_8u_C1R_replacement: allocation failed\n");
     r = -1;
     goto end;
       
   }
+  src_offst_ff = src_ffmpeg+(offset_h*srcStep) + offset_w;
+  memcpy(src_ffmpeg,pSrc[0],src_stride[0]*h);
   
-  memset(dst_ipp,0,h*dstStep);
-  memset(dst_ffmpeg,0,h*dstStep);
+
 
   roi.height    = hr;
   roi.width     = wr;
   
-  //IppStatus ippiMirror_8u_c1R(const Ipp8u* pSrc, int srcStep, Ipp8u* pDst, int dstStep, IppiSize roiSize, IppiAxis flip){
-  //ippiMirror_8u_C1R( pSrc[0]+(offset_h*srcStep)+offset_w,srcStep,dst_ipp,dstStep,roi,ippAxsHorizontal);
+  //IppStatus ippiSet_8u_C1R(Ipp8u value, Ipp8u pDst, int dstStep, IppiSize roiSize);
 
-  st = ippiSet_8u_C1R(src_offst,srcStep,dst_ipp,dstStep,roi,ippAxsHorizontal);
+  Output("seting %dx%d out of %dx%d\n",wr,hr,w,h);
+  st = ippiSet_8u_C1R(0,src_offst_pp,srcStep,roi);
 
   if(st != ippStsNoErr){
-    Output("Mirror_8u_C1R_test: st IS ERROR: %d\n",st);
+    Output("Set_8u_C1R_test: st IS ERROR: %d\n",st);
     r = -1;
     goto end;
   }
-  r = ippiMirror_8u_C1R_daf(src_offst,srcStep,dst_ffmpeg,dstStep,roi,ippAxsHorizontal);
+  r = ippiSet_8u_C1R_daf(0,src_offst_ff,srcStep,roi);
 
   if(r<0){
-    Output("Mirror_8u_C1R_test: ippiMirror_8u_C1R_daf failed\n");
+    Output("Set_8u_C1R_test: ippiSet_8u_C1R_daf failed\n");
     goto end;
   }
 
   //print_img("ipp",&src_offst,w,h,1);
-  print_img2("ipp",&src_offst,srcStep,wr,hr,1);
-  print_img2("mirror_ipp",&dst_ipp,dstStep,wr,hr,1);
+  print_img2("ipp",&src_offst_pp,srcStep,wr,hr,1);
+  //print_img2("set_ipp",&dst_ipp,dstStep,wr,hr,1);
   //ippiMirror_8u_C1R_daf(pSrc[0]+(offset_h*srcStep)+offset_w,srcStep,dst_ffmpeg,dstStep,roi);
 
-  print_img2("mirror_ffmpeg",&dst_ffmpeg,dstStep,wr,hr,1);
+  //print_img2("mirror_ffmpeg",&dst_ffmpeg,dstStep,wr,hr,1);
 
-  *ncc_val = ncc2(dst_ipp,dstStep,dst_ffmpeg,dstStep,w,h);
+  *ncc_val = ncc2(src_offst_pp,srcStep,src_offst_ff,srcStep,wr,hr);
   
  end:
   if(pSrc[0])
     free(pSrc[0]);
-  if(dst_ipp)
-    free(dst_ipp);
-  if(dst_ffmpeg)
-    free(dst_ffmpeg);
-  return r;
+  if(src_ffmpeg)
+    free(src_ffmpeg);
+
+  exit(1);
+  //return r;
  
 }
