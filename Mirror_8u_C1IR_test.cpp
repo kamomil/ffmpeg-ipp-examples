@@ -59,7 +59,7 @@ int ippiMirror_8u_C1IR_daf(Ipp8u* pSrcDst, int srcDstStep, IppiSize roiSize, Ipp
 
 int test_ippiMirror_8u_C1IR_replacement(AVFrame *frame, double* ncc_val){
 
-    IppiSize roi;
+  IppiSize roi;
 
   int w = frame->width;
   int h = frame->height;

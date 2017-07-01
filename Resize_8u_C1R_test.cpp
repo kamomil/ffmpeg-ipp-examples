@@ -128,7 +128,7 @@ dstStride	the array containing the strides for each plane of the destination ima
 
 //void test_ippiResize_8u_C1R_replacement(unsigned char* src,int w,int h){
 
-int test_ippiResize_8u_C1R_replacement(AVFrame *frame, double* ncc_val){
+int test_ippiResize_8u_C1R_replacement(AVFrame *frame, double* ncc_val,int idx){
 
   IppiSize roi;
 
@@ -146,11 +146,11 @@ int test_ippiResize_8u_C1R_replacement(AVFrame *frame, double* ncc_val){
   int extra_add_to_dst_width = rand_in_range(1,100);
   int extra_add_to_src_width = rand_in_range(1,100);
 
-  srcRect.x = rand_in_range(0,w-1);
-  srcRect.y = rand_in_range(0,h-1);
+  srcRect.x = rand_in_range(0,w/2);
+  srcRect.y = rand_in_range(0,h/h);
   
-  srcRect.width  = rand_in_range(1,w - srcRect.x);
-  srcRect.height = rand_in_range(1,h - srcRect.y);
+  srcRect.width  = rand_in_range(FFMIN(40,w - srcRect.x),w - srcRect.x);
+  srcRect.height = rand_in_range(FFMIN(40,h - srcRect.y),w - srcRect.y);
 
   xfactor = rand_in_range_double(0.1, 1.5);
   yfactor = rand_in_range_double(0.1, 1.5);
@@ -161,7 +161,8 @@ int test_ippiResize_8u_C1R_replacement(AVFrame *frame, double* ncc_val){
   
   int srcStep = w+extra_add_to_src_width;
   int dstStep = dstSize.width+extra_add_to_dst_width;
-  
+  char rect_filename[256] = {0};
+  char rect_resized_filename[256] = {0};
 
   //pSrc and src_stride will be filled by convert_to_GRAY8
   unsigned char* pSrc[4]={NULL,NULL,NULL,NULL};
@@ -178,16 +179,24 @@ int test_ippiResize_8u_C1R_replacement(AVFrame *frame, double* ncc_val){
   unsigned char* src_offst = pSrc[0]+(srcRect.y*srcStep) + srcRect.x;
     
   if(r<0){
-    Output("error: test_ippiCopy_8u_C1R_replacement: convert_to_GRAY8 failed\n");
+    Output("error: test_ippiResize_8u_C1R_replacement: convert_to_GRAY8 failed\n");
     goto end;
   }
 
   if(!dst_ipp || !dst_ffmpeg){
-    Output("error: test_ippiCopy_8u_C1R_replacement: allocation failed\n");
+    Output("error: test_ippiResize_8u_C1R_replacement: allocation failed\n");
     r = -1;
     goto end;
       
   }
+
+
+  pgm_save(pSrc[0], src_stride[0], w, h,"orig.yuv");
+
+  
+  snprintf(rect_filename, sizeof(rect_filename), "rect%02d.yuv", idx);
+  pgm_save(src_offst, src_stride[0], srcRect.width, srcRect.height,rect_filename);
+  Output("rect size is %dx%d\n",srcRect.width,srcRect.height);
   
   memset(dst_ipp,0,h*dstStep);
   memset(dst_ffmpeg,0,h*dstStep);
@@ -198,11 +207,11 @@ int test_ippiResize_8u_C1R_replacement(AVFrame *frame, double* ncc_val){
 
   //(const Ipp<datatype>* pSrc, IppiSize srcSize, int srcStep, IppiRect srcRoi, Ipp<datatype>* pDst, int dstStep, IppiSize dstRoiSize, double xFactor, double yFactor, int interpolation);
   
-
+  Output("rect_resize size is %dx%d\n",dstSize.width, dstSize.height);
 #ifdef WIN32
   st = ippiResize_8u_C1R( pSrc[0],srcSize,srcStep,srcRect,dst_ipp,dstStep,dstSize,xfactor,yfactor,interpolation);
   if(st != ippStsNoErr){
-    Output("Mirror_8u_C1R_test: st IS ERROR: %d\n",st);
+    Output("Resize_8u_C1R_test: st IS ERROR: %d\n",st);
     r = -1;
     goto end;
   } 		  
@@ -211,13 +220,17 @@ int test_ippiResize_8u_C1R_replacement(AVFrame *frame, double* ncc_val){
   r = ippiResize_8u_C1R_ffmpeg(pSrc[0], srcSize, srcStep, srcRect,dst_ffmpeg, dstStep, dstSize,xfactor, yfactor, interpolation);
 
   if(r<0){
-    Output("Mirror_8u_C1R_test: ippiMirror_8u_C1R_daf failed\n");
+    Output("Resize_8u_C1R_test: ippiMirror_8u_C1R_daf failed\n");
     goto end;
   }
 
-  //print_img("ipp",&src_offst,w,h,1);
+  snprintf(rect_resized_filename, sizeof(rect_resized_filename), "rect_resized%02d.yuv", idx);
+  pgm_save(dst_ffmpeg, dstStep, dstSize.width, dstSize.height,rect_resized_filename);
+  
+  
+  //print_img("ffmpeg",&(pSrc[0]),w,h,1);
   //print_img2("ipp",&src_offst,srcStep,wr,hr,1);
-  //print_img2("resize_ipp",&dst_ipp,dstStep,wr,hr,1);
+  //print_img2("resize_ffmpeg",&(pSrc[0]),srcStep,srcRect.width,srcRect.height,1);
   //ippiMirror_8u_C1R_daf(pSrc[0]+(offset_h*srcStep)+offset_w,srcStep,dst_ffmpeg,dstStep,roi);
 
   //print_img2("resize_ffmpeg",&dst_ffmpeg,dstStep,wr,hr,1);
@@ -231,6 +244,7 @@ int test_ippiResize_8u_C1R_replacement(AVFrame *frame, double* ncc_val){
     free(dst_ipp);
   if(dst_ffmpeg)
     free(dst_ffmpeg);
+  exit(1);
   return r;
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////
   /*

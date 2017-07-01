@@ -1,6 +1,3 @@
-#ifndef TEST_UTILS
-#define TEST_UTILS
-
 #ifdef WIN32
 #include <windows.h>
 #include <random>
@@ -239,7 +236,7 @@ void planar_to_packed(unsigned char* src[] , unsigned char *dst ,int w,int h, in
       if(src[ic])
 	dst[j++] = src[ic][i];
 }
-void pgm_save(unsigned char *buf, int wrap, int xsize, int ysize,char *filename)
+void pgm_save(unsigned char *buf, int linesize, int xsize, int height,char *filename)
 {
 	FILE *f;
 	int i;
@@ -249,12 +246,14 @@ void pgm_save(unsigned char *buf, int wrap, int xsize, int ysize,char *filename)
 		Output("failed opening %s\n",filename);
 		return;
 	}
-	if (fprintf(f, "P5\n%d %d\n%d\n", xsize, ysize, 255) < 0) {
+	if (fprintf(f, "P5\n%d %d\n%d\n", xsize, height, 255) < 0) {
 		Output("failed writing to %s\n", filename);
 		return;
 	}
-	for (i = 0; i < ysize; i++) {
-		int s = fwrite(buf + i * wrap, 1, xsize, f);
+	for (i = 0; i < height; i++) {
+	  // fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
+
+	  int s = fwrite(buf + i * linesize, 1, xsize, f);
 	}
 	fclose(f);
 }
@@ -349,4 +348,4 @@ int convert_to_GRAY8(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[],int e
   
 }
 
-#endif
+

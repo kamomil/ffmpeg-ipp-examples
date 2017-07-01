@@ -29,8 +29,7 @@ std::mt19937 gen;
 #include "RGBToYCbCr_8u_P3R_test.h"
 #include "Resize_8u_C1R_test.h"
 
-static int decode_write_frame(AVCodecContext *avctx,
-                              AVFrame *frame, AVPacket *pkt, int last)
+static int decode_write_frame(AVFrame *frame, int idx, int last)
 {
     
   int w = frame->width;
@@ -53,7 +52,7 @@ static int decode_write_frame(AVCodecContext *avctx,
   double ncc_val[3]={0,0,0};
 
   //test_ippiRGBToYCbCr_8u_P3R_replacement(AVFrame *frame, double ncc_plain_val[3]);
-  
+  /*
   test_ippiRGBToYCbCr_8u_P3R_replacement(frame,ncc_val);
   Output("ippiRGBToYCbCr_8u_P3R compare:\n");
   Output("%f %f %f\n\n",ncc_val[0],ncc_val[1],ncc_val[2]);
@@ -78,9 +77,9 @@ static int decode_write_frame(AVCodecContext *avctx,
   test_ippiCopy_8u_C3P3R_replacement(frame,ncc_val);
   Output("ippiCopy_8u_C3P3R compare:\n");
   Output("%f %f %f\n\n",ncc_val[0],ncc_val[1],ncc_val[2]);
-
+  */
   ncc_val[0] = ncc_val[1] = ncc_val[0] = 2;
-  test_ippiResize_8u_C1R_replacement(frame,ncc_val);
+  test_ippiResize_8u_C1R_replacement(frame,ncc_val,idx);
   Output("ippiResize_8u_C1R compare:\n");
   Output("%f\n",ncc_val[0]);
 
@@ -162,7 +161,7 @@ static void video_decode_example(const char *filename)
 	  
 	  if (frame_count % 50 == 0) {
 	    Output("\nframe %d:\n", frame_count);
-	    if (decode_write_frame(c, frame, &avpkt, 0) < 0) {
+	    if (decode_write_frame(frame, frame_count,0) < 0) {
 	      Output("decode_write_frame failed\n");
 	      exit(1);
 	    }
