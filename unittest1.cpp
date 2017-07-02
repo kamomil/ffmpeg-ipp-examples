@@ -84,12 +84,19 @@ static int decode_write_frame(AVFrame *frame, int idx, int last)
   test_ippiResize_8u_C1R_replacement(frame,ncc_val,idx);
   Output("ippiResize_8u_C1R compare:\n");
   Output("%f\n",ncc_val[0]);
-*/
+
   ncc_val[0] = ncc_val[1] = ncc_val[0] = 2;
   test_ippiSet_8u_C1R_replacement(frame,ncc_val);
   Output("ippiSet_8u_C1R compare:\n");
   Output("%f\n",ncc_val[0]);
+*/
+  ncc_val[0] = ncc_val[1] = ncc_val[0] = 0;
+  test_ippiAlphaCompC_8u_C1R_replacement(frame,ncc_val,idx);
 
+  Output("ippiAlphaCompC_8u_C1R compare:\n");
+  Output("%f\n",ncc_val[0]);
+
+  
   return 0;
 }
 
