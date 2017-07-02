@@ -29,6 +29,7 @@ std::mt19937 gen;
 #include "RGBToYCbCr_8u_P3R_test.h"
 #include "Resize_8u_C1R_test.h"
 #include "Set_8u_C1R_test.h"
+#include "AlphaCompC_8u_C1R_test.h"
 
 static int decode_write_frame(AVFrame *frame, int idx, int last)
 {

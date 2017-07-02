@@ -9,16 +9,6 @@
 #include <time.h>
 #include <math.h>
 
-extern "C"
-{
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
-#include <libavutil/imgutils.h>
-#include <libavutil/samplefmt.h>
-#include <libswscale/swscale.h>
-#include <libavutil/avstring.h>
-#include <libavutil/intreadwrite.h>
-}
 #include "test_utils.h"
 
 double rand_in_range_double(double min, double max) {
