@@ -126,9 +126,15 @@ double ncc2(const unsigned char* im1 ,int im1_linesz, const unsigned char* im2,i
   double mean1 = 0;
   double mean2 = 0;
   int i=0;
+  if(!t1 || !t2){
+    Output("ncc2: allocation failure\n");
+    return 0;
+  }
+  Output("im1_linesz=%d im2_linesz=%d, w=%d h=%d\n",im1_linesz,im2_linesz,w,h);
   for(int ih=0;ih<h;ih++){
     for(int iw=0;iw<w;iw++){
       //double X=(((double)rand()/(double)RAND_MAX)/100)-0.005;
+      
       t1[i] = im1[ih*im1_linesz+iw]*1.0;//+X;
       mean1 += t1[i];
       t2[i] = im2[ih*im2_linesz+iw]*1.0;
@@ -137,6 +143,7 @@ double ncc2(const unsigned char* im1 ,int im1_linesz, const unsigned char* im2,i
     }
     //Output("mean1  = %f, mean2 = %f\n",mean1,mean2);
   }
+  
   mean1 = mean1 / (1.0*sz);
   mean2 = mean2 / (1.0*sz);
 

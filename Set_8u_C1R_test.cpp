@@ -70,7 +70,8 @@ int test_ippiSet_8u_C1R_replacement(AVFrame *frame, double* ncc_val){
   unsigned char* src_ffmpeg = (unsigned char*)malloc(src_stride[0]*h);
 
   unsigned char* src_offst_ff;
-    
+
+  char rect_filename[256] = {0};
   if(r<0){
     Output("error: test_ippiSet_8u_C1R_replacement: convert_to_GRAY8 failed\n");
     goto end;
@@ -93,28 +94,33 @@ int test_ippiSet_8u_C1R_replacement(AVFrame *frame, double* ncc_val){
   //IppStatus ippiSet_8u_C1R(Ipp8u value, Ipp8u pDst, int dstStep, IppiSize roiSize);
 
   Output("seting %dx%d out of %dx%d\n",wr,hr,w,h);
-  st = ippiSet_8u_C1R(0,src_offst_pp,srcStep,roi);
+  st = ippiSet_8u_C1R(255,src_offst_pp,srcStep,roi);
 
   if(st != ippStsNoErr){
     Output("Set_8u_C1R_test: st IS ERROR: %d\n",st);
     r = -1;
     goto end;
   }
-  r = ippiSet_8u_C1R_daf(0,src_offst_ff,srcStep,roi);
+  r = ippiSet_8u_C1R_daf(255,src_offst_ff,srcStep,roi);
 
   if(r<0){
     Output("Set_8u_C1R_test: ippiSet_8u_C1R_daf failed\n");
     goto end;
   }
 
+  snprintf(rect_filename, sizeof(rect_filename), "srectf%02d.yuv", 1);
+  pgm_save(src_offst_ff, src_stride[0], w, h,rect_filename);
+  //Output("rect size is %dx%d\n",srcRect.width,srcRect.height);
+
   //print_img("ipp",&src_offst,w,h,1);
-  print_img2("ipp",&src_offst_pp,srcStep,wr,hr,1);
+  //print_img2("ipp",&src_offst_pp,srcStep,34,50,1);
   //print_img2("set_ipp",&dst_ipp,dstStep,wr,hr,1);
   //ippiMirror_8u_C1R_daf(pSrc[0]+(offset_h*srcStep)+offset_w,srcStep,dst_ffmpeg,dstStep,roi);
 
   //print_img2("mirror_ffmpeg",&dst_ffmpeg,dstStep,wr,hr,1);
 
-  *ncc_val = ncc2(src_offst_pp,srcStep,src_offst_ff,srcStep,wr,hr);
+  *ncc_val = ncc2(src_offst_pp,srcStep,src_offst_ff,srcStep,w-offset_w,h-offset_h);
+  Output("ncc is %f\n",*ncc_val);
   
  end:
   if(pSrc[0])
