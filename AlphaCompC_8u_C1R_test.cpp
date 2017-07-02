@@ -24,8 +24,50 @@ extern "C"
   IppStatus ippiAlphaCompC_<mod>(const Ipp<datatype>* pSrc1, int src1Step, Ipp<datatype> alpha1, const Ipp<datatype>* pSrc2, int src2Step, Ipp<datatype> alpha2, Ipp<datatype>* pDst, int dstStep, IppiSize roiSize, IppiAlphaType alphaType);
   */
 
-int ippiAlphaCompC_8u_C1R_daf(const Ipp8u* pSrc1, int src1Step, Ipp8u alpha1, const Ipp8u pSrc2, int src2Step, Ipp8u alpha2, Ipp8u* pDst, int dstStep, IppiSize roiSize, IppiAlphaType alphaType){
+//over: α_A*A+(1- α_A)* α_B*B
+//plus: α_A*A+α_B*B
 
+int ippiAlphaCompC_8u_C1R_daf(const Ipp8u* pSrc1, int src1Step, Ipp8u alpha1, const Ipp8u* pSrc2, int src2Step, Ipp8u alpha2, Ipp8u* pDst, int dstStep, IppiSize roiSize, IppiAlphaType alphaType){
+
+
+  unsigned char* ptr_dst;
+  unsigned char* ptr_dst_end;
+  const unsigned char* ptr_src1;
+  const unsigned char* ptr_src2;
+
+  unsigned char a;
+  if(alphaType == ippAlphaPlus){
+    a = 1;
+  }
+  else if(alphaType == ippAlphaOver){
+    a = 1-alpha1;
+  }
+  else{
+    Output("error: IppiAlphaType %d not supported\n",alphaType);
+    return -1;
+      
+  }
+  for(;roiSize.height;roiSize.height--){
+
+    ptr_dst = pDst;
+    ptr_dst_end = pDst+roiSize.width;
+    ptr_src1 = pSrc1;
+    ptr_src2 = pSrc2;
+      
+    while(ptr_dst != ptr_dst_end){
+
+      *ptr_dst =  (alpha1*(*ptr_src1)) + (a*alpha2*(*ptr_src2));//todo - look in  function blend_plane in vf_overlay.c of ffmpeg
+
+      ptr_dst++;
+      ptr_src1++;
+      ptr_src2++;
+      
+    }
+    pDst += dstStep;
+    pSrc1 += src1Step;
+    pSrc2 += src2Step;
+
+  }
   return 0;
 }
 
@@ -66,7 +108,7 @@ int test_ippiAlphaCompC_8u_C1R_replacement(AVFrame *frame, double* ncc_val,int i
 
   unsigned char *dst_ipp =    (unsigned char*)malloc(h*dstStep);
   unsigned char *dst_ffmpeg = (unsigned char*)malloc(h*dstStep);
-
+  
   IppStatus st = ippStsNoErr;
 
   //unsigned char* src_offst = pSrc[0]+(srcRect.y*srcStep) + srcRect.x;
@@ -98,28 +140,35 @@ int test_ippiAlphaCompC_8u_C1R_replacement(AVFrame *frame, double* ncc_val,int i
   f = fopen("small_apple72x74_gray.yuv", "rb");
   if (!f) {
     fprintf(stderr, "Could not open %s\n", "small_apple72x74_gray.yuv");
-    exit(1);
+    r = -1;
+    goto end;
   }
+
+  memcpy(dst_ipp,pSrc[0],w*h);
+  memcpy(dst_ffmpeg,pSrc[0],w*h);
 
   
   sz = fread(watermark, 1, 100000, f);
   
   pgm_save(pSrc[0], src_stride[0], src_stride[0], h,"alph_src1.yuv");
 
-  
-  
-  memset(dst_ipp,0,h*dstStep);
-  memset(dst_ffmpeg,0,h*dstStep);
-
   //roi.height    = hr;
   //roi.width     = wr;
 
   //Alpha plus = 48
   //Alpha over = 64
-  st = ippiAlphaCompC_8u_C1R(watermark,water_w,48,pSrc[0], srcStep, 255, pSrc[0], dstStep, roi, ippAlphaPlus);
+  st = ippiAlphaCompC_8u_C1R(watermark,water_w,48,pSrc[0], srcStep, 255, dst_ipp, dstStep, roi, ippAlphaPlus);
 
-  snprintf(comp_filename, sizeof(comp_filename), "comp%02d.yuv", idx);
-  pgm_save(pSrc[0], dstStep, w, h,comp_filename);
+  snprintf(comp_filename, sizeof(comp_filename), "comp-ipp%02d.yuv", idx);
+  pgm_save(dst_ipp, dstStep, w, h,comp_filename);
+  
+
+
+  r = ippiAlphaCompC_8u_C1R_daf(watermark,water_w,48,pSrc[0], srcStep, 255, dst_ffmpeg, dstStep, roi, ippAlphaPlus);
+
+  snprintf(comp_filename, sizeof(comp_filename), "comp-daf%02d.yuv", idx);
+  pgm_save(dst_ffmpeg, dstStep, w, h,comp_filename);
+
   Output("roi size is %dx%d\n",roi.width,roi.height);
 
 
@@ -133,14 +182,6 @@ int test_ippiAlphaCompC_8u_C1R_replacement(AVFrame *frame, double* ncc_val,int i
   IppStatus ippiAlphaCompC_<mod>(const Ipp<datatype>* pSrc1, int src1Step, Ipp<datatype> alpha1, const Ipp<datatype>* pSrc2, int src2Step, Ipp<datatype> alpha2, Ipp<datatype>* pDst, int dstStep, IppiSize roiSize, IppiAlphaType alphaType);
   */
  
-#ifdef WIN32
-  st = ippiResize_8u_C1R( pSrc[0],srcSize,srcStep,srcRect,dst_ipp,dstStep,dstSize,xfactor,yfactor,interpolation);
-  if(st != ippStsNoErr){
-    Output("AlphaCompC_8u_C1R_test: st IS ERROR: %d\n",st);
-    r = -1;
-    goto end;
-  } 		  
-#endif  
 
   //r = ippiAlphaCompC_8u_C1R_daf(...)
   /*
