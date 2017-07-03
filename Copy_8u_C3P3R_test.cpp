@@ -50,6 +50,8 @@ int ippiCopy_8u_C3P3R_daf_buggy(const Ipp8u* pSrc, int srcStep, Ipp8u* const pDs
   return 0;  
 }
 
+
+//we can also implement this by converting RGB to GBRP using swscale and the wsaping the pointers
 int ippiCopy_8u_C3P3R_daf(const Ipp8u* pSrc, int srcStep, Ipp8u* const pDst[3], int dstStep, IppiSize roiSize){
 
   const unsigned char* start_of_srow_ptr = pSrc;

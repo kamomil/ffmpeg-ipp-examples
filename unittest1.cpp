@@ -26,6 +26,7 @@ std::mt19937 gen;
 #include "Mirror_8u_C1IR_test.h"
 
 #include "Copy_8u_C3P3R_test.h"
+#include "Copy_8u_C4C1R_test.h"
 #include "RGBToYCbCr_8u_P3R_test.h"
 #include "Resize_8u_C1R_test.h"
 #include "Set_8u_C1R_test.h"

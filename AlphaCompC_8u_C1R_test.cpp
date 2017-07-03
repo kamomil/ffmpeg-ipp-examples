@@ -19,6 +19,7 @@ extern "C"
 #include "test_utils.h"
 #include "AlphaCompC_8u_C1R_test.h"
 
+#define FAST_DIV255(x) ((((x) + 128) * 257) >> 16)
 
 /*
   IppStatus ippiAlphaCompC_<mod>(const Ipp<datatype>* pSrc1, int src1Step, Ipp<datatype> alpha1, const Ipp<datatype>* pSrc2, int src2Step, Ipp<datatype> alpha2, Ipp<datatype>* pDst, int dstStep, IppiSize roiSize, IppiAlphaType alphaType);
@@ -40,7 +41,7 @@ int ippiAlphaCompC_8u_C1R_daf(const Ipp8u* pSrc1, int src1Step, Ipp8u alpha1, co
     a = 1;
   }
   else if(alphaType == ippAlphaOver){
-    a = 1-alpha1;
+    a = 255-alpha1;
   }
   else{
     Output("error: IppiAlphaType %d not supported\n",alphaType);
@@ -56,7 +57,7 @@ int ippiAlphaCompC_8u_C1R_daf(const Ipp8u* pSrc1, int src1Step, Ipp8u alpha1, co
       
     while(ptr_dst != ptr_dst_end){
 
-      *ptr_dst =  (alpha1*(*ptr_src1)) + (a*alpha2*(*ptr_src2));//todo - look in  function blend_plane in vf_overlay.c of ffmpeg
+      *ptr_dst =  FAST_DIV255((alpha1*(*ptr_src1)) + (a*alpha2*(*ptr_src2)));//todo - look in  function blend_plane in vf_overlay.c of ffmpeg
 
       ptr_dst++;
       ptr_src1++;
