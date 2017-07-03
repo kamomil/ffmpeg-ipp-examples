@@ -214,7 +214,7 @@ int test_ippiAlphaCompC_8u_C1R_replacement(AVFrame *frame, double* ncc_val,int i
     free(dst_ffmpeg);
   if(watermark)
     free(watermark);
-  exit(1);
+  
   return r;
   
 }

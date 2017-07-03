@@ -67,4 +67,6 @@ int convert_to_RGB24(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[],int e
 int convert_to_GRAY8(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[],int extra_width);
 
 int convert_to_RGBA(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[],int extra_width);
+
+int convert_to_YUV444P(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[],int extra_width);
 #endif

@@ -299,6 +299,30 @@ int convert_to_GBRP(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[])
 
  }
 
+int convert_to_YUV444P(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[],int extra_width)
+{
+
+  int w = f_in->width;
+  int h = f_in->height;
+  
+  AVPixelFormat dst_format;
+
+  dst[0] = (unsigned char *)malloc((w+extra_width)*h);
+  dst[1] = (unsigned char *)malloc((w+extra_width)*h);
+  dst[2] = (unsigned char *)malloc((w+extra_width)*h);
+  dst[3] = NULL;
+  
+  if(!dst[0] || !dst[1] || !dst[2]){
+    Output("convert_to_YUV444P: allocation failure\n");
+    return -1;
+  }
+  dst_stride[0] =  dst_stride[1] = dst_stride[2] = w;
+  dst_stride[3] = 0;
+  
+  return convert_to_format(f_in, dst ,dst_stride, AV_PIX_FMT_YUV444P);
+
+ }
+
 int convert_to_RGB24(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[],int extra_width)
 {
 

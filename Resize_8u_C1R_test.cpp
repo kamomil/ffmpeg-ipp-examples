@@ -244,66 +244,7 @@ int test_ippiResize_8u_C1R_replacement(AVFrame *frame, double* ncc_val,int idx){
     free(dst_ipp);
   if(dst_ffmpeg)
     free(dst_ffmpeg);
-  exit(1);
-  return r;
-  ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  /*
-  IppiSize srcSize,dstSize;
-  IppiRect srcRect;
-  unsigned char *dst_ipp, *dst_ffmpeg;
-  double xfactor, yfactor;
-  int interpolation;
-
-  srcSize.width = w;
-  srcSize.height = h;
-
-  if (w < 30 || h < 30) {
-	  Output("warning: width or height too small\n");
-	  return;
-  }
-  do {
-	  srcRect.x = rand_in_range(w / 3, w - 1);
-	  srcRect.y = rand_in_range(h / 3, h - 1);
-
-	  srcRect.width = rand_in_range((w - srcRect.x) / 3, w - srcRect.x);
-	  srcRect.height = rand_in_range((h - srcRect.y) / 3, h - srcRect.y);
-
-	  xfactor = rand_in_range_double(0.1, 1.5);
-	  yfactor = rand_in_range_double(0.1, 1.5);
-	  interpolation = (xfactor >= 1.0 || yfactor >= 1.0) ? IPPI_INTER_LINEAR : IPPI_INTER_SUPER;
-
-	  dstSize.width = (int)(xfactor * srcRect.width);
-	  dstSize.height = (int)(yfactor * srcRect.height);
-  }
-  while (srcRect.x < 3 || srcRect.y < 3 || srcRect.width < 3 || srcRect.height < 3 || dstSize.width < 3 || dstSize.height < 3);
-
-
-  dst_ipp = (uint8_t*)malloc(dstSize.height * dstSize.width);
-  memset(dst_ipp,0, dstSize.height * dstSize.width);
   
-  //                                         1              2            3                 4              5         6        7        7                   8              9            10   
-  //IppStatus ippiResize_8u_C1R(const Ipp8u* pSrc, IppiSize srcSize, int srcStep, IppiRect srcRoi, Ipp8u* pDst, int dstStep, IppiSize dstRoiSize, double xFactor, double yFactor, int interpolation);
-  //
-#ifdef WIN32
-  ippiResize_8u_C1R( src,    srcSize,w,srcRect,
-	                 dst_ipp,dstSize.width,dstSize,
-	                 xfactor,yfactor,interpolation);
-    				 
- // print_img("dst_ipp",&dst_ipp, dstSize.width, dstSize.height, 1);
-#endif  
-  dst_ffmpeg = (uint8_t*)malloc(dstSize.height * dstSize.width+100);
-  memset(dst_ffmpeg,0, dstSize.height * dstSize.width);
-
-  ippiResize_8u_C1R_ffmpeg(src, srcSize, w, srcRect,
-	  dst_ffmpeg, dstSize.width, dstSize,
-	  xfactor, yfactor, interpolation);
-	  
-  //print_img("dst_ffmpeg", &dst_ffmpeg, dstSize.width, dstSize.height, 1);
-  double n  = ncc(dst_ipp,dst_ffmpeg,dstSize.width*dstSize.height);
-  int x = 1;
-  //double n  = ncc(dst_ipp,dst_ffmpeg,dstSize.width*dstSize.height);
-  //Output("ncc is %d\n",n*1000);
-  //exit(1);
-  return;
-  */
+  return r;
+  
 }

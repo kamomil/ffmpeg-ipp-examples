@@ -128,7 +128,7 @@ int test_ippiSet_8u_C1R_replacement(AVFrame *frame, double* ncc_val){
   if(src_ffmpeg)
     free(src_ffmpeg);
 
-  exit(1);
-  //return r;
+  
+  return r;
  
 }

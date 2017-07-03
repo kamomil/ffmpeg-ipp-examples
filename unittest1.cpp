@@ -31,7 +31,7 @@ std::mt19937 gen;
 #include "Resize_8u_C1R_test.h"
 #include "Set_8u_C1R_test.h"
 #include "AlphaCompC_8u_C1R_test.h"
-
+#include "YCbCrToRGB_8u_P3R_test.h"
 static int decode_write_frame(AVFrame *frame, int idx, int last)
 {
     
@@ -80,28 +80,36 @@ static int decode_write_frame(AVFrame *frame, int idx, int last)
   test_ippiCopy_8u_C3P3R_replacement(frame,ncc_val);
   Output("ippiCopy_8u_C3P3R compare:\n");
   Output("%f %f %f\n\n",ncc_val[0],ncc_val[1],ncc_val[2]);
-  
+  */
+  /*
   ncc_val[0] = ncc_val[1] = ncc_val[0] = 2;
   test_ippiResize_8u_C1R_replacement(frame,ncc_val,idx);
   Output("ippiResize_8u_C1R compare:\n");
   Output("%f\n",ncc_val[0]);
-
+  */
+  /*
   ncc_val[0] = ncc_val[1] = ncc_val[0] = 2;
   test_ippiSet_8u_C1R_replacement(frame,ncc_val);
   Output("ippiSet_8u_C1R compare:\n");
   Output("%f\n",ncc_val[0]);
-
+  */
+  /*
   ncc_val[0] = ncc_val[1] = ncc_val[0] = 0;
   test_ippiAlphaCompC_8u_C1R_replacement(frame,ncc_val,idx);
 
   Output("ippiAlphaCompC_8u_C1R compare:\n");
   Output("%f\n",ncc_val[0]);
-*/
+
   ncc_val[0] = ncc_val[1] = ncc_val[0] = 0;
   test_ippiCopy_8u_C4C1R_replacement(frame,ncc_val);
   Output("ippiCopy_8u_C4C1R_daf compare:\n");
   Output("%f\n",ncc_val[0]);
+  */
 
+  ncc_val[0] = ncc_val[1] = ncc_val[0] = 0;
+  test_ippiYCbCrToRGB_8u_P3R_replacement(frame,ncc_val);
+  Output("ippiYCbCrToRGB_8u_P3R_ffmpeg compare:\n");
+  Output("%f %f %f\n",ncc_val[0],ncc_val[1],ncc_val[2]);
   
   return 0;
 }
