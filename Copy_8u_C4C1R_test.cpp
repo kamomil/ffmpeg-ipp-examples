@@ -67,13 +67,15 @@ int test_ippiCopy_8u_C4C1R_replacement(AVFrame *frame, double ncc_plain_val[3]){
   unsigned char* pSrc[4]={NULL,NULL,NULL,NULL};
   int src_stride[4]={0,0,0,0};
   
-  int srcStep = 3*w+extra_add_to_src_width;
+  int srcStep = 4*w+extra_add_to_src_width;
   int dstStep = w+extra_add_to_dst_width;
   
   
   //this allocates pSrc
-  int r = 0;//convert_to_RGBA(frame, pSrc , src_stride,extra_add_to_src_width);//TODO
-  
+  int r = convert_to_RGBA(frame, pSrc , src_stride,extra_add_to_src_width);//TODO
+  Output("%p %p %p %p w=%d h=%d\n",pSrc[0],pSrc[1],pSrc[2],pSrc[3],w,h);
+  Output("%d %d \n",src_stride[0],src_stride[1]);
+      
   if(r<0){
     Output("error: test_ippiCopy_8u_C1R_replacement: convert_to_GRAY8 failed\n");
     if(pSrc[0])
@@ -91,7 +93,7 @@ int test_ippiCopy_8u_C4C1R_replacement(AVFrame *frame, double ncc_plain_val[3]){
   unsigned char* src_end = NULL;
 
   if(!dst_ipp || !dst_daf){
-    Output("error: test_ippiCopy_8u_C1R_replacement: allocation failed\n");
+    Output("error: test_ippiCopy_8u_C4C1R_replacement: allocation failed\n");
     r = -1;
     goto end;
   }
@@ -102,28 +104,34 @@ int test_ippiCopy_8u_C4C1R_replacement(AVFrame *frame, double ncc_plain_val[3]){
   roi.height    = hr;
   roi.width     = wr;
 
+
+  
   //ippiCopy_<mod>(const Ipp<datatype>* pSrc, int srcStep, Ipp<datatype>* const pDst[3], int dstStep, IppiSize roiSize);
     
-  //ippiCopy_8u_C4C1R    (pSrc[0]+(offset_h*srcStep)+3*offset_w,srcStep,dst_ipp,dstStep,roi);
-  //ippiCopy_8u_C4C1R_daf(pSrc[0]+(offset_h*srcStep)+3*offset_w,srcStep,dst_daf,dstStep,roi);
+  //ippiCopy_8u_C4C1R    (pSrc[0]+(offset_h*srcStep)+4*offset_w,srcStep,dst_ipp,dstStep,roi);
 
-  src = pSrc[0]+(offset_h*srcStep)+3*offset_w;
+  src = pSrc[0]+(offset_h*srcStep)+4*offset_w;
+  ippiCopy_8u_C4C1R_daf(src,srcStep,dst_daf,dstStep,roi);
+  ippiCopy_8u_C4C1R(src,srcStep,dst_ipp,dstStep,roi);
+
+  /*
+  src = pSrc[0]+(offset_h*srcStep)+4*offset_w;
   src_end = src+srcStep*(roi.height-1);
   
   r = ippiCopy_8u_C4C1R(src_end,0-srcStep,dst_ipp,dstStep,roi);
   if(r != ippStsNoErr){
-    Output("error:  ippiCopy_8u_C3P3R failed with val %d\n",r);
+    Output("error:  ippiCopy_8u_C4C1R failed with val %d\n",r);
     r = -1;
     goto end;
   }
   r = ippiCopy_8u_C4C1R_daf(src_end,0-srcStep,dst_daf,dstStep,roi);
 
   if(r < 0){
-    Output("error:  ippiCopy_8u_C3P3R_daf failed with val\n");
+    Output("error:  ippiCopy_8u_C4C1R_daf failed with val\n");
     r = -1;
     goto end;
   }
-
+  */
   //print_img("copy_ipp",dst_ipp,10,10,1);
   //
   //print_img("copy_daf",dst_daf,10,10,1);
@@ -132,8 +140,8 @@ int test_ippiCopy_8u_C4C1R_replacement(AVFrame *frame, double ncc_plain_val[3]){
 
 
  end:
-  if(pSrc)
-    free(pSrc);
+  if(pSrc[0])
+    free(pSrc[0]);
   if(dst_ipp)
     free(dst_ipp);  
   if(dst_daf)

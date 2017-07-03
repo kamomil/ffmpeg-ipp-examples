@@ -65,4 +65,6 @@ int convert_to_GBRP(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[]);
 int convert_to_RGB24(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[],int extra_width);
 
 int convert_to_GRAY8(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[],int extra_width);
+
+int convert_to_RGBA(AVFrame* f_in, unsigned char *dst[] ,int dst_stride[],int extra_width);
 #endif
